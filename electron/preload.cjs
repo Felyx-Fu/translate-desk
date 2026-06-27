@@ -29,6 +29,12 @@ contextBridge.exposeInMainWorld("desktop", {
   },
   ocr: {
     recognizePrimary: () => ipcRenderer.invoke("ocr:recognize-primary"),
+    selectRegion: () => ipcRenderer.invoke("ocr:select-region"),
+  },
+  capture: {
+    submit: (selection) => ipcRenderer.invoke("capture:submit", selection),
+    cancel: () => ipcRenderer.invoke("capture:cancel"),
+    onPayload: (callback) => subscribe("capture:payload", callback),
   },
   wordbook: {
     load: () => ipcRenderer.invoke("wordbook:load"),

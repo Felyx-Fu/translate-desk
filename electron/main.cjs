@@ -1,4 +1,13 @@
-const { app, BrowserWindow, clipboard, desktopCapturer, globalShortcut, ipcMain, screen } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  clipboard,
+  desktopCapturer,
+  globalShortcut,
+  ipcMain,
+  nativeImage,
+  screen,
+} = require("electron");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const Tesseract = require("tesseract.js");
@@ -9,9 +18,11 @@ const isSmokeTest = process.argv.includes("--smoke-test");
 
 let mainWindow;
 let floatingWindow;
+let captureWindow;
 let clipboardWatchTimer;
 let lastClipboardText = "";
 let pendingFloatingPayload = null;
+let activeCaptureSelection = null;
 
 function appFile(...segments) {
   return path.join(__dirname, "..", ...segments);
@@ -43,6 +54,62 @@ function loadRenderer(window, hash = "") {
   window.loadFile(appFile("dist", "index.html"), {
     hash: hash.replace(/^#/, ""),
   });
+}
+
+async function recognizeImage(dataUrl, metadata = {}) {
+  if (!dataUrl) {
+    return {
+      ...metadata,
+      dataUrl,
+      text: "",
+      confidence: 0,
+      error: "No image available",
+    };
+  }
+
+  try {
+    const result = await Tesseract.recognize(dataUrl, "eng", {
+      logger: () => {},
+    });
+    return {
+      ...metadata,
+      dataUrl,
+      text: result.data.text.trim(),
+      confidence: Math.round(result.data.confidence || 0),
+      error: null,
+    };
+  } catch (error) {
+    return {
+      ...metadata,
+      dataUrl,
+      text: "",
+      confidence: 0,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function cropCapture(capture, selection) {
+  const image = nativeImage.createFromDataURL(capture.dataUrl);
+  const imageSize = image.getSize();
+  const viewportWidth = Math.max(1, Number(selection.viewportWidth) || imageSize.width);
+  const viewportHeight = Math.max(1, Number(selection.viewportHeight) || imageSize.height);
+  const scaleX = imageSize.width / viewportWidth;
+  const scaleY = imageSize.height / viewportHeight;
+  const x = Math.max(0, Math.round(Number(selection.x) * scaleX));
+  const y = Math.max(0, Math.round(Number(selection.y) * scaleY));
+  const width = Math.max(1, Math.round(Number(selection.width) * scaleX));
+  const height = Math.max(1, Math.round(Number(selection.height) * scaleY));
+  const safeRect = {
+    x: Math.min(x, imageSize.width - 1),
+    y: Math.min(y, imageSize.height - 1),
+    width: Math.min(width, imageSize.width - x),
+    height: Math.min(height, imageSize.height - y),
+  };
+  return {
+    dataUrl: image.crop(safeRect).toDataURL(),
+    region: safeRect,
+  };
 }
 
 function createMainWindow() {
@@ -110,6 +177,58 @@ function createFloatingWindow() {
   });
 
   return floatingWindow;
+}
+
+function closeCaptureWindow() {
+  if (!captureWindow) return;
+  captureWindow.close();
+  captureWindow = null;
+}
+
+function createCaptureWindow(capture) {
+  closeCaptureWindow();
+
+  const display = screen.getPrimaryDisplay();
+  captureWindow = new BrowserWindow({
+    x: display.bounds.x,
+    y: display.bounds.y,
+    width: display.bounds.width,
+    height: display.bounds.height,
+    frame: false,
+    resizable: false,
+    movable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    show: false,
+    title: "Translate Desk Capture",
+    backgroundColor: "#111111",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  captureWindow.setAlwaysOnTop(true, "screen-saver");
+  loadRenderer(captureWindow, "#capture");
+  captureWindow.once("ready-to-show", () => {
+    captureWindow.show();
+    captureWindow.focus();
+  });
+  captureWindow.webContents.on("did-finish-load", () => {
+    captureWindow?.webContents.send("capture:payload", {
+      name: capture.name,
+      dataUrl: capture.dataUrl,
+    });
+  });
+  captureWindow.on("closed", () => {
+    captureWindow = null;
+    if (activeCaptureSelection) {
+      activeCaptureSelection.resolve({ cancelled: true });
+      activeCaptureSelection = null;
+    }
+  });
 }
 
 function showFloating(payload = {}) {
@@ -209,24 +328,48 @@ ipcMain.handle("ocr:recognize-primary", async () => {
     };
   }
 
-  try {
-    const result = await Tesseract.recognize(capture.dataUrl, "eng", {
-      logger: () => {},
-    });
-    return {
-      ...capture,
-      text: result.data.text.trim(),
-      confidence: Math.round(result.data.confidence || 0),
-      error: null,
-    };
-  } catch (error) {
+  return recognizeImage(capture.dataUrl, {
+    name: capture.name,
+    region: null,
+  });
+});
+ipcMain.handle("ocr:select-region", async () => {
+  const capture = await capturePrimaryScreen();
+  if (!capture.dataUrl) {
     return {
       ...capture,
       text: "",
       confidence: 0,
-      error: error instanceof Error ? error.message : String(error),
+      error: "No screen capture available",
     };
   }
+
+  return new Promise((resolve) => {
+    activeCaptureSelection = { capture, resolve };
+    createCaptureWindow(capture);
+  });
+});
+ipcMain.handle("capture:submit", async (_event, selection) => {
+  if (!activeCaptureSelection) return false;
+
+  const { capture, resolve } = activeCaptureSelection;
+  activeCaptureSelection = null;
+  const cropped = cropCapture(capture, selection);
+  const result = await recognizeImage(cropped.dataUrl, {
+    name: capture.name,
+    region: cropped.region,
+  });
+  resolve(result);
+  closeCaptureWindow();
+  return true;
+});
+ipcMain.handle("capture:cancel", () => {
+  if (activeCaptureSelection) {
+    activeCaptureSelection.resolve({ cancelled: true });
+    activeCaptureSelection = null;
+  }
+  closeCaptureWindow();
+  return true;
 });
 
 app.whenReady().then(() => {

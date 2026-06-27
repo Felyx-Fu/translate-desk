@@ -529,6 +529,91 @@ function FloatingTranslator() {
   );
 }
 
+function CaptureSelector() {
+  const [payload, setPayload] = useState(null);
+  const [start, setStart] = useState(null);
+  const [current, setCurrent] = useState(null);
+
+  useEffect(() => {
+    const desktop = getDesktop();
+    if (!desktop) return undefined;
+
+    const unsubscribe = desktop.capture.onPayload(setPayload);
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") desktop.capture.cancel();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
+  const rect = start && current
+    ? {
+        x: Math.min(start.x, current.x),
+        y: Math.min(start.y, current.y),
+        width: Math.abs(current.x - start.x),
+        height: Math.abs(current.y - start.y),
+      }
+    : null;
+
+  function handlePointerDown(event) {
+    if (event.button !== 0) return;
+    setStart({ x: event.clientX, y: event.clientY });
+    setCurrent({ x: event.clientX, y: event.clientY });
+  }
+
+  function handlePointerMove(event) {
+    if (!start) return;
+    setCurrent({ x: event.clientX, y: event.clientY });
+  }
+
+  function handlePointerUp() {
+    const desktop = getDesktop();
+    if (!desktop || !rect) return;
+    if (rect.width < 8 || rect.height < 8) {
+      setStart(null);
+      setCurrent(null);
+      return;
+    }
+
+    desktop.capture.submit({
+      ...rect,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+    });
+  }
+
+  return (
+    <main
+      className="capture-shell"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+    >
+      {payload?.dataUrl ? <img src={payload.dataUrl} alt="Screen capture" /> : null}
+      <div className="capture-dim" />
+      {rect ? (
+        <div
+          className="capture-selection"
+          style={{
+            left: rect.x,
+            top: rect.y,
+            width: rect.width,
+            height: rect.height,
+          }}
+        />
+      ) : null}
+      <section className="capture-help" onPointerDown={(event) => event.stopPropagation()}>
+        <strong>拖拽框选要识别的英文区域</strong>
+        <span>松开鼠标后自动 OCR。Esc 取消。</span>
+        <button type="button" onClick={() => getDesktop()?.capture.cancel()}>取消</button>
+      </section>
+    </main>
+  );
+}
+
 function MainApp() {
   const [activeNav, setActiveNav] = useState("翻译工作台");
   const [direction, setDirection] = useState("英 → 中");
@@ -721,7 +806,11 @@ function MainApp() {
       error: null,
     }));
     try {
-      const result = await desktop.ocr.recognizePrimary();
+      const result = await desktop.ocr.selectRegion();
+      if (result.cancelled) {
+        setOcrResult((current) => current ? { ...current, status: "ready" } : null);
+        return;
+      }
       const text = result.text?.trim() || "";
       const translation = text ? translateText(text, "自动检测") : "";
       const nextResult = {
@@ -900,6 +989,10 @@ function MainApp() {
 export function App() {
   if (typeof window !== "undefined" && window.location.hash === "#floating") {
     return <FloatingTranslator />;
+  }
+
+  if (typeof window !== "undefined" && window.location.hash === "#capture") {
+    return <CaptureSelector />;
   }
 
   return <MainApp />;

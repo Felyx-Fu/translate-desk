@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 - 2026-06-27
+
+### Added
+
+- Added a fullscreen screenshot region selector for desktop OCR.
+- Added main-process crop-and-recognize flow for selected screen regions.
+- Added a dedicated `#capture` renderer surface for drag selection and cancel handling.
+
 ## 0.1.1 - 2026-06-27
 
 ### Fixed

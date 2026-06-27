@@ -10,7 +10,7 @@ Translate Desk is a Windows-focused English-Chinese translation desktop app buil
 - Ctrl+Space floating translation window.
 - Wordbook persistence through Electron user data.
 - Reading through the Web Speech API when available.
-- Screenshot OCR first pass through `tesseract.js` for English text.
+- Screenshot region OCR first pass through `tesseract.js` for English text.
 - Minimal, quiet office-tool interface matching the approved prototype direction.
 
 ## Run Locally
@@ -50,4 +50,3 @@ This project follows semantic versioning:
 - Security patch release: dependency or code change that reduces security risk.
 
 Every release should update `CHANGELOG.md`, pass verification, create a Git tag, and publish a GitHub Release.
-
