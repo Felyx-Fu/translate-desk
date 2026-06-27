@@ -15,6 +15,8 @@ npm run build
 node --check electron\main.cjs
 node --check electron\preload.cjs
 npx electron . --smoke-test
+npm audit --audit-level=moderate
+npm run dist:win
 ```
 
 ## Release Steps
@@ -31,8 +33,9 @@ git commit -m "release vX.Y.Z"
 git tag vX.Y.Z
 git push
 git push origin vX.Y.Z
-gh release create vX.Y.Z --title "vX.Y.Z" --notes-file CHANGELOG.md
+gh release create vX.Y.Z --title "vX.Y.Z" --notes-file CHANGELOG.md release\*.zip
 ```
 
 For security fixes, include a short security note in the release notes without exposing exploit details that are not already public.
 
+Do not publish a normal release without application artifacts. If packaging fails, use a pre-release or fix packaging first.

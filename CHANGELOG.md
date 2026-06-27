@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1 - 2026-06-27
+
+### Added
+
+- Added Windows portable application packaging.
+- Added `npm run dist:win` to produce a downloadable x64 ZIP containing `Translate Desk.exe`.
+- Updated release documentation so GitHub releases include installable application files, not only source tags.
+
 ## 0.2.0 - 2026-06-27
 
 ### Added

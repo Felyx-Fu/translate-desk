@@ -32,6 +32,15 @@ Desktop preview from built files:
 npm run desktop:preview
 ```
 
+Build Windows release artifacts:
+
+```powershell
+npm run dist:win
+```
+
+Release output is written to `release/` and should be uploaded to the matching GitHub Release.
+The current artifact is a portable x64 ZIP. Extract it and run `Translate Desk.exe`.
+
 ## Verify
 
 ```powershell
