@@ -1,5 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode, type PointerEvent as ReactPointerEvent } from "react";
 import { Dismiss24Regular } from "@fluentui/react-icons";
+import type {
+  CapturePayload,
+  ClipboardHistoryItem,
+  CommandPayload,
+  DesktopApi,
+  Direction,
+  OcrResultState,
+  OcrSelectResult,
+  SelectionRect,
+  WordbookEntry,
+} from "./desktop";
 
 const englishDefault =
   "The contract requires the supplier to provide written notice within five business days after receiving the updated delivery schedule.";
@@ -14,7 +25,13 @@ const navItems = [
   "生词本",
   "离线词库",
   "朗读设置",
-];
+] as const;
+
+type ActiveNav = (typeof navItems)[number];
+type TopPanel = "search" | "command" | "settings" | null;
+type Point = Pick<SelectionRect, "x" | "y">;
+
+const languageDirections = ["英 → 中", "中 → 英", "自动检测"] satisfies Direction[];
 
 const quickStatus = [
   "划词后显示悬浮窗",
@@ -23,7 +40,7 @@ const quickStatus = [
   "朗读：英音 / 1.0x",
 ];
 
-const defaultWordbook = [
+const defaultWordbook: WordbookEntry[] = [
   { word: "supplier", meaning: "供应商", context: "商务合同" },
   { word: "schedule", meaning: "计划表", context: "项目管理" },
   { word: "notice", meaning: "通知", context: "法务文件" },
@@ -35,17 +52,17 @@ const clipboardHistory = [
   "Within five business days.",
 ];
 
-function hasChinese(value) {
+function hasChinese(value: string): boolean {
   return /[\u4e00-\u9fff]/.test(value);
 }
 
-function detectDirection(value) {
+function detectDirection(value: string): Direction | null {
   const input = value.trim();
   if (!input) return null;
   return hasChinese(input) ? "中 → 英" : "英 → 中";
 }
 
-function translateText(value, mode) {
+function translateText(value: string, mode: Direction): string {
   const input = value.trim();
   if (!input) return "";
 
@@ -65,11 +82,11 @@ function translateText(value, mode) {
   return `离线中文译文草稿：${input}`;
 }
 
-function getDesktop() {
-  return typeof window !== "undefined" ? window.desktop : null;
+function getDesktop(): DesktopApi | null {
+  return typeof window !== "undefined" ? window.desktop ?? null : null;
 }
 
-function formatTime(value, fallback = "09:42") {
+function formatTime(value: string | null | undefined, fallback = "09:42"): string {
   if (!value) return fallback;
   return new Intl.DateTimeFormat("zh-CN", {
     hour: "2-digit",
@@ -78,7 +95,7 @@ function formatTime(value, fallback = "09:42") {
   }).format(new Date(value));
 }
 
-function speakText(value, onDone) {
+function speakText(value: string, onDone?: () => void): void {
   if (!value || typeof window === "undefined" || !window.speechSynthesis) {
     onDone?.();
     return;
@@ -93,7 +110,7 @@ function speakText(value, onDone) {
   window.speechSynthesis.speak(utterance);
 }
 
-function createWordbookEntry(source, target) {
+function createWordbookEntry(source: string, target: string): WordbookEntry {
   const match = source.match(/[A-Za-z][A-Za-z-]+/);
   const word = match?.[0]?.toLowerCase() || source.slice(0, 12);
   const meaning = hasChinese(target) ? target.slice(0, 18) : "待复习";
@@ -104,7 +121,28 @@ function createWordbookEntry(source, target) {
   };
 }
 
-function IconButton({ label, children, onClick, active = false }) {
+function isWordbookEntry(value: unknown): value is WordbookEntry {
+  if (!value || typeof value !== "object") return false;
+  const entry = value as Partial<WordbookEntry>;
+  return (
+    typeof entry.word === "string" &&
+    typeof entry.meaning === "string" &&
+    typeof entry.context === "string"
+  );
+}
+
+function isOcrCancelled(result: OcrSelectResult): result is { cancelled: true } {
+  return "cancelled" in result && result.cancelled === true;
+}
+
+type IconButtonProps = {
+  label: string;
+  children: ReactNode;
+  onClick: () => void;
+  active?: boolean;
+};
+
+function IconButton({ label, children, onClick, active = false }: IconButtonProps) {
   return (
     <button
       className={`icon-button${active ? " is-active" : ""}`}
@@ -118,7 +156,13 @@ function IconButton({ label, children, onClick, active = false }) {
   );
 }
 
-function Pill({ children, active, onClick }) {
+type PillProps = {
+  children: ReactNode;
+  active: boolean;
+  onClick: () => void;
+};
+
+function Pill({ children, active, onClick }: PillProps) {
   return (
     <button
       className={`pill${active ? " is-active" : ""}`}
@@ -130,7 +174,13 @@ function Pill({ children, active, onClick }) {
   );
 }
 
-function Metric({ label, value, tone }) {
+type MetricProps = {
+  label: string;
+  value: string;
+  tone: string;
+};
+
+function Metric({ label, value, tone }: MetricProps) {
   return (
     <div className="metric">
       <strong className={`metric-value ${tone}`}>{value}</strong>
@@ -139,7 +189,13 @@ function Metric({ label, value, tone }) {
   );
 }
 
-function StatusRow({ children, active, onClick }) {
+type StatusRowProps = {
+  children: ReactNode;
+  active: boolean;
+  onClick: () => void;
+};
+
+function StatusRow({ children, active, onClick }: StatusRowProps) {
   return (
     <button className={`status-row${active ? " is-on" : ""}`} type="button" onClick={onClick}>
       <span>{children}</span>
@@ -147,7 +203,11 @@ function StatusRow({ children, active, onClick }) {
   );
 }
 
-function OcrResult({ ocrResult }) {
+type OcrResultProps = {
+  ocrResult: OcrResultState | null;
+};
+
+function OcrResult({ ocrResult }: OcrResultProps) {
   if (ocrResult?.status === "recognizing") {
     return (
       <>
@@ -187,7 +247,11 @@ function OcrResult({ ocrResult }) {
   );
 }
 
-function OcrDialog({ ocrResult, onClose }) {
+type OcrDialogProps = OcrResultProps & {
+  onClose: () => void;
+};
+
+function OcrDialog({ ocrResult, onClose }: OcrDialogProps) {
   return (
     <div className="modal-backdrop" role="presentation">
       <section className="ocr-dialog" role="dialog" aria-modal="true" aria-labelledby="ocr-title">
@@ -220,6 +284,24 @@ function OcrDialog({ ocrResult, onClose }) {
   );
 }
 
+type TranslationWorkspaceProps = {
+  direction: Direction;
+  sourceText: string;
+  targetText: string;
+  speaking: boolean;
+  saved: boolean;
+  onDirectionChange: (direction: Direction) => void;
+  onSourceChange: (value: string) => void;
+  onTargetChange: (value: string) => void;
+  onSpeakToggle: () => void;
+  onSave: () => void;
+  onSelectionTranslate: () => void;
+  onCopySource: () => void;
+  onCompare: () => void;
+  onExport: () => void;
+  onOcrOpen: () => void;
+};
+
 function TranslationWorkspace({
   direction,
   sourceText,
@@ -236,11 +318,11 @@ function TranslationWorkspace({
   onCompare,
   onExport,
   onOcrOpen,
-}) {
+}: TranslationWorkspaceProps) {
   return (
     <>
       <div className="language-tabs" aria-label="Translation direction">
-        {["英 → 中", "中 → 英", "自动检测"].map((item) => (
+        {languageDirections.map((item) => (
           <Pill key={item} active={item === direction} onClick={() => onDirectionChange(item)}>
             {item}
           </Pill>
@@ -296,7 +378,11 @@ function TranslationWorkspace({
   );
 }
 
-function OcrWorkspace({ ocrResult, onOcrOpen }) {
+type OcrWorkspaceProps = OcrResultProps & {
+  onOcrOpen: () => void;
+};
+
+function OcrWorkspace({ ocrResult, onOcrOpen }: OcrWorkspaceProps) {
   return (
     <section className="feature-page">
       <header className="page-header">
@@ -325,7 +411,14 @@ function OcrWorkspace({ ocrResult, onOcrOpen }) {
   );
 }
 
-function ClipboardWorkspace({ clipboardOn, items, onToggle, onUseItem }) {
+type ClipboardWorkspaceProps = {
+  clipboardOn: boolean;
+  items: ClipboardHistoryItem[];
+  onToggle: () => void;
+  onUseItem: (item: ClipboardHistoryItem) => void;
+};
+
+function ClipboardWorkspace({ clipboardOn, items, onToggle, onUseItem }: ClipboardWorkspaceProps) {
   return (
     <section className="feature-page">
       <header className="page-header">
@@ -349,7 +442,12 @@ function ClipboardWorkspace({ clipboardOn, items, onToggle, onUseItem }) {
   );
 }
 
-function WordbookWorkspace({ words, onSpeakWord }) {
+type WordbookWorkspaceProps = {
+  words: WordbookEntry[];
+  onSpeakWord: (word: string) => void;
+};
+
+function WordbookWorkspace({ words, onSpeakWord }: WordbookWorkspaceProps) {
   return (
     <section className="feature-page">
       <header className="page-header">
@@ -401,7 +499,12 @@ function OfflineWorkspace() {
   );
 }
 
-function VoiceWorkspace({ speaking, onSpeakToggle }) {
+type VoiceWorkspaceProps = {
+  speaking: boolean;
+  onSpeakToggle: () => void;
+};
+
+function VoiceWorkspace({ speaking, onSpeakToggle }: VoiceWorkspaceProps) {
   return (
     <section className="feature-page">
       <header className="page-header">
@@ -425,7 +528,11 @@ function VoiceWorkspace({ speaking, onSpeakToggle }) {
   );
 }
 
-function SearchPanel({ onClose }) {
+type ClosePanelProps = {
+  onClose: () => void;
+};
+
+function SearchPanel({ onClose }: ClosePanelProps) {
   return (
     <section className="floating-panel search-panel">
       <header>
@@ -440,7 +547,14 @@ function SearchPanel({ onClose }) {
   );
 }
 
-function CommandPanel({ payload, onClose, onCopy, onSave, onSpeak }) {
+type CommandPanelProps = ClosePanelProps & {
+  payload: CommandPayload;
+  onCopy: (value: string) => Promise<void>;
+  onSave: (source: string, target: string) => void;
+  onSpeak: (value: string) => void;
+};
+
+function CommandPanel({ payload, onClose, onCopy, onSave, onSpeak }: CommandPanelProps) {
   const source = payload?.source || "written notice within five business days";
   const target = payload?.target || "五个工作日内的书面通知";
 
@@ -463,7 +577,7 @@ function CommandPanel({ payload, onClose, onCopy, onSave, onSpeak }) {
   );
 }
 
-function SettingsPanel({ onClose }) {
+function SettingsPanel({ onClose }: ClosePanelProps) {
   const rows = ["开机启动", "启用剪贴板监听", "划词后显示悬浮窗", "无网络时使用离线词库"];
   return (
     <aside className="settings-drawer">
@@ -482,7 +596,7 @@ function SettingsPanel({ onClose }) {
 }
 
 function FloatingTranslator() {
-  const [source, setSource] = useState("written notice within five business days");
+  const [source, setSource] = useState<string>("written notice within five business days");
   const target = translateText(source, "自动检测");
 
   useEffect(() => {
@@ -530,16 +644,16 @@ function FloatingTranslator() {
 }
 
 function CaptureSelector() {
-  const [payload, setPayload] = useState(null);
-  const [start, setStart] = useState(null);
-  const [current, setCurrent] = useState(null);
+  const [payload, setPayload] = useState<CapturePayload | null>(null);
+  const [start, setStart] = useState<Point | null>(null);
+  const [current, setCurrent] = useState<Point | null>(null);
 
   useEffect(() => {
     const desktop = getDesktop();
     if (!desktop) return undefined;
 
     const unsubscribe = desktop.capture.onPayload(setPayload);
-    const onKeyDown = (event) => {
+    const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") desktop.capture.cancel();
     };
     window.addEventListener("keydown", onKeyDown);
@@ -549,7 +663,7 @@ function CaptureSelector() {
     };
   }, []);
 
-  const rect = start && current
+  const rect: SelectionRect | null = start && current
     ? {
         x: Math.min(start.x, current.x),
         y: Math.min(start.y, current.y),
@@ -558,13 +672,13 @@ function CaptureSelector() {
       }
     : null;
 
-  function handlePointerDown(event) {
+  function handlePointerDown(event: ReactPointerEvent<HTMLElement>) {
     if (event.button !== 0) return;
     setStart({ x: event.clientX, y: event.clientY });
     setCurrent({ x: event.clientX, y: event.clientY });
   }
 
-  function handlePointerMove(event) {
+  function handlePointerMove(event: ReactPointerEvent<HTMLElement>) {
     if (!start) return;
     setCurrent({ x: event.clientX, y: event.clientY });
   }
@@ -615,26 +729,26 @@ function CaptureSelector() {
 }
 
 function MainApp() {
-  const [activeNav, setActiveNav] = useState("翻译工作台");
-  const [direction, setDirection] = useState("英 → 中");
-  const [sourceText, setSourceText] = useState(englishDefault);
-  const [targetText, setTargetText] = useState(chineseDefault);
-  const [clipboardItems, setClipboardItems] = useState(() =>
+  const [activeNav, setActiveNav] = useState<ActiveNav>("翻译工作台");
+  const [direction, setDirection] = useState<Direction>("英 → 中");
+  const [sourceText, setSourceText] = useState<string>(englishDefault);
+  const [targetText, setTargetText] = useState<string>(chineseDefault);
+  const [clipboardItems, setClipboardItems] = useState<ClipboardHistoryItem[]>(() =>
     clipboardHistory.map((source) => ({
       source,
       target: translateText(source, "自动检测"),
       capturedAt: null,
     })),
   );
-  const [wordbookEntries, setWordbookEntries] = useState(defaultWordbook);
-  const [wordbookReady, setWordbookReady] = useState(false);
-  const [clipboardOn, setClipboardOn] = useState(true);
-  const [saved, setSaved] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
-  const [ocrOpen, setOcrOpen] = useState(false);
-  const [ocrResult, setOcrResult] = useState(null);
-  const [topPanel, setTopPanel] = useState(null);
-  const [commandPayload, setCommandPayload] = useState({
+  const [wordbookEntries, setWordbookEntries] = useState<WordbookEntry[]>(defaultWordbook);
+  const [wordbookReady, setWordbookReady] = useState<boolean>(false);
+  const [clipboardOn, setClipboardOn] = useState<boolean>(true);
+  const [saved, setSaved] = useState<boolean>(false);
+  const [speaking, setSpeaking] = useState<boolean>(false);
+  const [ocrOpen, setOcrOpen] = useState<boolean>(false);
+  const [ocrResult, setOcrResult] = useState<OcrResultState | null>(null);
+  const [topPanel, setTopPanel] = useState<TopPanel>(null);
+  const [commandPayload, setCommandPayload] = useState<CommandPayload>({
     source: "written notice within five business days",
     target: "五个工作日内的书面通知",
   });
@@ -650,8 +764,11 @@ function MainApp() {
     }
 
     try {
-      const stored = JSON.parse(localStorage.getItem("translate-desk-wordbook") || "[]");
-      if (Array.isArray(stored) && stored.length > 0) setWordbookEntries(stored);
+      const stored = JSON.parse(localStorage.getItem("translate-desk-wordbook") || "[]") as unknown;
+      if (Array.isArray(stored)) {
+        const entries = stored.filter(isWordbookEntry);
+        if (entries.length > 0) setWordbookEntries(entries);
+      }
     } catch {
       // Ignore malformed local prototype data.
     }
@@ -703,7 +820,7 @@ function MainApp() {
     });
   }, []);
 
-  function applyTranslation(value) {
+  function applyTranslation(value: string): CommandPayload {
     const nextDirection = detectDirection(value) || direction;
     const nextTarget = translateText(value, nextDirection);
     setDirection(nextDirection);
@@ -712,7 +829,7 @@ function MainApp() {
     return { source: value, target: nextTarget };
   }
 
-  function handleSourceChange(value) {
+  function handleSourceChange(value: string): void {
     const detectedDirection = detectDirection(value);
     const nextDirection =
       direction === "自动检测" ? direction : detectedDirection ?? direction;
@@ -723,7 +840,7 @@ function MainApp() {
     setTargetText(translateText(value, nextDirection));
   }
 
-  function selectDirection(nextDirection) {
+  function selectDirection(nextDirection: Direction): void {
     setDirection(nextDirection);
     if (nextDirection === "自动检测") {
       setTargetText(translateText(sourceText, nextDirection));
@@ -746,7 +863,7 @@ function MainApp() {
     setTargetText(translateText(nextSource, nextDirection));
   }
 
-  async function writeClipboard(value) {
+  async function writeClipboard(value: string): Promise<void> {
     const desktop = getDesktop();
     if (desktop) {
       await desktop.clipboard.writeText(value);
@@ -755,7 +872,7 @@ function MainApp() {
     await navigator.clipboard?.writeText(value);
   }
 
-  function addWordbookEntry(source = sourceText, target = targetText) {
+  function addWordbookEntry(source = sourceText, target = targetText): void {
     const entry = createWordbookEntry(source, target);
     setWordbookEntries((current) => [
       entry,
@@ -764,7 +881,7 @@ function MainApp() {
     setSaved(true);
   }
 
-  function handleSpeak(value = sourceText) {
+  function handleSpeak(value = sourceText): void {
     if (speaking) {
       window.speechSynthesis?.cancel();
       setSpeaking(false);
@@ -776,7 +893,7 @@ function MainApp() {
 
   async function handleSelectionTranslate() {
     const desktop = getDesktop();
-    const selectedText = window.getSelection?.().toString().trim();
+    const selectedText = window.getSelection?.()?.toString().trim() ?? "";
     const externalSelection =
       !selectedText && desktop?.selection
         ? await desktop.selection.read()
@@ -799,6 +916,7 @@ function MainApp() {
     if (!desktop) {
       setOcrResult({
         status: "ready",
+        name: "Prototype capture",
         dataUrl: null,
         text: "Payment instructions must remain unchanged.",
         translation: "付款说明必须保持不变。",
@@ -809,19 +927,26 @@ function MainApp() {
     }
 
     setOcrResult((current) => ({
-      ...current,
+      ...(current ?? {
+        name: "Region capture",
+        dataUrl: null,
+        text: "",
+        translation: "",
+        confidence: 0,
+        error: null,
+      }),
       status: "recognizing",
       error: null,
     }));
     try {
       const result = await desktop.ocr.selectRegion();
-      if (result.cancelled) {
+      if (isOcrCancelled(result)) {
         setOcrResult((current) => current ? { ...current, status: "ready" } : null);
         return;
       }
       const text = result.text?.trim() || "";
       const translation = text ? translateText(text, "自动检测") : "";
-      const nextResult = {
+      const nextResult: OcrResultState = {
         ...result,
         text,
         translation,
@@ -835,6 +960,7 @@ function MainApp() {
     } catch (error) {
       setOcrResult({
         status: "ready",
+        name: "Region capture",
         dataUrl: null,
         text: "",
         translation: "",
@@ -844,12 +970,12 @@ function MainApp() {
     }
   }
 
-  function handleUseClipboardItem(item) {
+  function handleUseClipboardItem(item: ClipboardHistoryItem): void {
     applyTranslation(item.source);
     setActiveNav("翻译工作台");
   }
 
-  function renderWorkspace() {
+  function renderWorkspace(): ReactNode {
     if (activeNav === "截图 OCR") return <OcrWorkspace ocrResult={ocrResult} onOcrOpen={handleOcrOpen} />;
     if (activeNav === "剪贴板监听") {
       return (

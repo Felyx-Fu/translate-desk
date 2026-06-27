@@ -1,6 +1,6 @@
 # Translate Desk
 
-Translate Desk is a Windows-focused English-Chinese translation desktop app built from the current prototype direction. It uses React + Vite for the interface and Electron for local desktop capabilities.
+Translate Desk is a Windows-focused English-Chinese translation desktop app built from the current prototype direction. It uses TypeScript + React + Vite for the interface and Electron for local desktop capabilities.
 
 ## Current Capabilities
 
@@ -46,8 +46,8 @@ The current artifact is a portable x64 ZIP. Extract it and run `Translate Desk.e
 
 ```powershell
 npm run build
-node --check electron\main.cjs
-node --check electron\preload.cjs
+node --check dist-electron\main.cjs
+node --check dist-electron\preload.cjs
 npx electron . --smoke-test
 ```
 

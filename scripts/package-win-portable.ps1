@@ -45,13 +45,13 @@ if (Test-Path -LiteralPath $defaultApp) {
 
 New-Item -ItemType Directory -Force -Path $appContent | Out-Null
 Copy-Item -LiteralPath (Join-Path $root "dist") -Destination (Join-Path $appContent "dist") -Recurse -Force
-Copy-Item -LiteralPath (Join-Path $root "electron") -Destination (Join-Path $appContent "electron") -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $root "dist-electron") -Destination (Join-Path $appContent "dist-electron") -Recurse -Force
 
 $appPackage = [ordered]@{
   name = "translate-desk"
   version = $version
   productName = "Translate Desk"
-  main = "electron/main.cjs"
+  main = "dist-electron/main.cjs"
   dependencies = [ordered]@{
     "tesseract.js" = $package.dependencies."tesseract.js"
   }

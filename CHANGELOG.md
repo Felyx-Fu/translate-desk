@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0 - 2026-06-27
+
+### Changed
+
+- Migrated the React renderer from JavaScript/JSX to TypeScript/TSX.
+- Migrated the Electron main and preload entry points to TypeScript `.cts` sources that compile to `dist-electron/*.cjs`.
+- Added strict TypeScript checks for renderer, preload, and main-process code.
+- Updated Windows packaging so releases use compiled Electron output instead of source main-process files.
+
+### Notes
+
+- Rust/Tauri is still a later architecture step because it affects OCR, global shortcuts, clipboard access, and Windows packaging.
+
 ## 0.3.0 - 2026-06-27
 
 ### Added

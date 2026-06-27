@@ -25,8 +25,8 @@ Run these checks before requesting review:
 
 ```powershell
 npm run build
-node --check electron\main.cjs
-node --check electron\preload.cjs
+node --check dist-electron\main.cjs
+node --check dist-electron\preload.cjs
 npx electron . --smoke-test
 ```
 

@@ -12,10 +12,10 @@ Run before each tag:
 
 ```powershell
 npm run build
-node --check electron\main.cjs
-node --check electron\preload.cjs
+node --check dist-electron\main.cjs
+node --check dist-electron\preload.cjs
 npx electron . --smoke-test
-npm audit --audit-level=moderate
+npm audit --audit-level=moderate --omit=dev
 npm run dist:win
 ```
 

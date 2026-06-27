@@ -1,16 +1,18 @@
 {
   "name": "translator-prototype",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
-  "main": "electron/main.cjs",
+  "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "desktop": "concurrently -k -s first \"npm:dev\" \"npm:desktop:open\"",
-    "desktop:open": "wait-on http://127.0.0.1:5173 && electron . --dev-server=http://127.0.0.1:5173",
+    "desktop:open": "npm run build:electron && wait-on http://127.0.0.1:5173 && electron . --dev-server=http://127.0.0.1:5173",
     "desktop:preview": "npm run build && electron .",
     "dist:win": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-win-portable.ps1",
-    "build": "vite build",
+    "build": "npm run typecheck && npm run build:electron && vite build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.electron.json",
     "preview": "vite preview --host 127.0.0.1"
   },
   "description": "Quiet Windows desktop translator for English-Chinese workflows.",
@@ -24,8 +26,12 @@
     "vite": "^6.4.3"
   },
   "devDependencies": {
+    "@types/node": "^26.0.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "concurrently": "^10.0.3",
     "electron": "^42.5.0",
+    "typescript": "^6.0.3",
     "wait-on": "^9.0.10"
   }
 }

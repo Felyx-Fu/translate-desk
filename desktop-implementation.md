@@ -8,6 +8,7 @@
 
 **Implemented**
 - Electron Windows desktop shell with a main workbench window.
+- TypeScript renderer, preload, and main-process source with strict checks in the build pipeline.
 - Secure preload bridge with controlled APIs for clipboard, wordbook persistence, screen capture, shortcuts, and floating window control.
 - Ctrl+Space global shortcut opens a compact floating translation window using the current clipboard text.
 - Ctrl+Space and the selection translation action can read selected text from other Windows applications by temporarily copying the selection, translating it, and restoring the user's original clipboard.
@@ -23,9 +24,10 @@
 - OCR region selection currently targets the primary display. Next step: support multi-display selection.
 - Selected-text translation uses Windows SendKeys to copy the active external selection. Next step: evaluate a lower-level native hook if SendKeys proves unreliable in some applications.
 - Windows installer packaging is not configured yet. Next step: add `electron-builder` or equivalent packaging after core features stabilize.
+- Rust/Tauri migration is not started yet. Next step: evaluate it after OCR, shortcuts, clipboard, and packaging requirements are stable enough to avoid rewriting them twice.
 
 **Verified**
 - `npm run build` passes.
-- `node --check electron/main.cjs` passes.
-- `node --check electron/preload.cjs` passes.
+- `node --check dist-electron/main.cjs` passes.
+- `node --check dist-electron/preload.cjs` passes.
 - `npx electron . --smoke-test` starts Electron from `dist`, loads the app, prints `electron-smoke-ok`, and exits.

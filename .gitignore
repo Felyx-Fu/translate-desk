@@ -4,6 +4,7 @@ node_modules/
 
 # Build output
 dist/
+dist-electron/
 release/
 out/
 build/
@@ -29,4 +30,3 @@ Thumbs.db
 # Electron/local runtime state
 *.local
 userData/
-

@@ -1,3 +1,5 @@
+import type { BrowserWindow as BrowserWindowType, IpcMainInvokeEvent } from "electron";
+
 const {
   app,
   BrowserWindow,
@@ -7,41 +9,87 @@ const {
   ipcMain,
   nativeImage,
   screen,
-} = require("electron");
-const { execFile } = require("node:child_process");
-const fs = require("node:fs/promises");
-const path = require("node:path");
-const { promisify } = require("node:util");
-const Tesseract = require("tesseract.js");
+} = require("electron") as typeof import("electron");
+const { execFile } = require("node:child_process") as typeof import("node:child_process");
+const fs = require("node:fs/promises") as typeof import("node:fs/promises");
+const path = require("node:path") as typeof import("node:path");
+const { promisify } = require("node:util") as typeof import("node:util");
+const Tesseract = require("tesseract.js") as typeof import("tesseract.js");
 
 const execFileAsync = promisify(execFile);
 
 const devServerArg = process.argv.find((arg) => arg.startsWith("--dev-server="));
-const devServerUrl = devServerArg ? devServerArg.split("=")[1] : null;
+const devServerUrl = devServerArg?.slice("--dev-server=".length) || null;
 const isSmokeTest = process.argv.includes("--smoke-test");
 
-let mainWindow;
-let floatingWindow;
-let captureWindow;
-let clipboardWatchTimer;
+type CapturePayload = {
+  name: string;
+  dataUrl: string | null;
+};
+
+type SelectionRect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  viewportWidth?: number;
+  viewportHeight?: number;
+};
+
+type CroppedRegion = Pick<SelectionRect, "x" | "y" | "width" | "height">;
+
+type RecognitionMetadata = {
+  name?: string;
+  region?: CroppedRegion | null;
+};
+
+type RecognitionResult = CapturePayload &
+  RecognitionMetadata & {
+    text: string;
+    confidence: number;
+    error: string | null;
+  };
+
+type CaptureSelectionResult = RecognitionResult | { cancelled: true };
+
+type ActiveCaptureSelection = {
+  capture: CapturePayload & { dataUrl: string };
+  resolve: (value: CaptureSelectionResult) => void;
+};
+
+type FloatingPayload = {
+  source?: string;
+  sourceKind?: string;
+};
+
+type ExternalSelectionResult = {
+  text: string;
+  source: "selection";
+  error?: string;
+};
+
+let mainWindow: BrowserWindowType | null;
+let floatingWindow: BrowserWindowType | null;
+let captureWindow: BrowserWindowType | null;
+let clipboardWatchTimer: ReturnType<typeof setInterval> | null;
 let lastClipboardText = "";
-let pendingFloatingPayload = null;
-let activeCaptureSelection = null;
+let pendingFloatingPayload: { source: string } | null = null;
+let activeCaptureSelection: ActiveCaptureSelection | null = null;
 let suppressClipboardEventsUntil = 0;
 
-function delay(ms) {
+function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function appFile(...segments) {
+function appFile(...segments: string[]): string {
   return path.join(__dirname, "..", ...segments);
 }
 
-function getWordbookPath() {
+function getWordbookPath(): string {
   return path.join(app.getPath("userData"), "wordbook.json");
 }
 
-async function capturePrimaryScreen() {
+async function capturePrimaryScreen(): Promise<CapturePayload> {
   const display = screen.getPrimaryDisplay();
   const sources = await desktopCapturer.getSources({
     types: ["screen"],
@@ -54,21 +102,29 @@ async function capturePrimaryScreen() {
   };
 }
 
-function loadRenderer(window, hash = "") {
+function loadRenderer(browserWindow: BrowserWindowType, hash = ""): void {
   if (devServerUrl) {
-    window.loadURL(`${devServerUrl}${hash}`);
+    browserWindow.loadURL(`${devServerUrl}${hash}`);
     return;
   }
 
-  window.loadFile(appFile("dist", "index.html"), {
+  browserWindow.loadFile(appFile("dist", "index.html"), {
     hash: hash.replace(/^#/, ""),
   });
 }
 
-async function recognizeImage(dataUrl, metadata = {}) {
+async function recognizeImage(
+  dataUrl: string | null,
+  metadata: RecognitionMetadata = {},
+): Promise<RecognitionResult> {
+  const resultMetadata = {
+    ...metadata,
+    name: metadata.name ?? "Captured image",
+  };
+
   if (!dataUrl) {
     return {
-      ...metadata,
+      ...resultMetadata,
       dataUrl,
       text: "",
       confidence: 0,
@@ -81,15 +137,15 @@ async function recognizeImage(dataUrl, metadata = {}) {
       logger: () => {},
     });
     return {
-      ...metadata,
+      ...resultMetadata,
       dataUrl,
       text: result.data.text.trim(),
       confidence: Math.round(result.data.confidence || 0),
       error: null,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     return {
-      ...metadata,
+      ...resultMetadata,
       dataUrl,
       text: "",
       confidence: 0,
@@ -98,7 +154,10 @@ async function recognizeImage(dataUrl, metadata = {}) {
   }
 }
 
-function cropCapture(capture, selection) {
+function cropCapture(
+  capture: CapturePayload & { dataUrl: string },
+  selection: SelectionRect,
+): { dataUrl: string; region: CroppedRegion } {
   const image = nativeImage.createFromDataURL(capture.dataUrl);
   const imageSize = image.getSize();
   const viewportWidth = Math.max(1, Number(selection.viewportWidth) || imageSize.width);
@@ -121,7 +180,7 @@ function cropCapture(capture, selection) {
   };
 }
 
-function createMainWindow() {
+function createMainWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1248,
     height: 860,
@@ -143,7 +202,7 @@ function createMainWindow() {
   });
 }
 
-function createFloatingWindow() {
+function createFloatingWindow(): BrowserWindowType {
   if (floatingWindow) return floatingWindow;
 
   const display = screen.getPrimaryDisplay();
@@ -175,7 +234,7 @@ function createFloatingWindow() {
   loadRenderer(floatingWindow, "#floating");
 
   floatingWindow.webContents.on("did-finish-load", () => {
-    if (pendingFloatingPayload) {
+    if (pendingFloatingPayload && floatingWindow) {
       floatingWindow.webContents.send("floating:payload", pendingFloatingPayload);
       pendingFloatingPayload = null;
     }
@@ -188,13 +247,13 @@ function createFloatingWindow() {
   return floatingWindow;
 }
 
-function closeCaptureWindow() {
+function closeCaptureWindow(): void {
   if (!captureWindow) return;
   captureWindow.close();
   captureWindow = null;
 }
 
-function createCaptureWindow(capture) {
+function createCaptureWindow(capture: CapturePayload & { dataUrl: string }): void {
   closeCaptureWindow();
 
   const display = screen.getPrimaryDisplay();
@@ -222,8 +281,8 @@ function createCaptureWindow(capture) {
   captureWindow.setAlwaysOnTop(true, "screen-saver");
   loadRenderer(captureWindow, "#capture");
   captureWindow.once("ready-to-show", () => {
-    captureWindow.show();
-    captureWindow.focus();
+    captureWindow?.show();
+    captureWindow?.focus();
   });
   captureWindow.webContents.on("did-finish-load", () => {
     captureWindow?.webContents.send("capture:payload", {
@@ -240,21 +299,21 @@ function createCaptureWindow(capture) {
   });
 }
 
-function showFloating(payload = {}) {
+function showFloating(payload: FloatingPayload = {}): void {
   const source = payload.source || clipboard.readText().trim();
-  const window = createFloatingWindow();
+  const popup = createFloatingWindow();
   pendingFloatingPayload = { source };
 
-  if (window.webContents.isLoading()) {
-    window.once("ready-to-show", () => window.showInactive());
+  if (popup.webContents.isLoading()) {
+    popup.once("ready-to-show", () => popup.showInactive());
   } else {
-    window.webContents.send("floating:payload", pendingFloatingPayload);
+    popup.webContents.send("floating:payload", pendingFloatingPayload);
     pendingFloatingPayload = null;
-    window.showInactive();
+    popup.showInactive();
   }
 }
 
-function emitClipboardText(text) {
+function emitClipboardText(text: string): void {
   if (!text || text.length < 6) return;
   mainWindow?.webContents.send("clipboard:text", {
     text,
@@ -262,7 +321,7 @@ function emitClipboardText(text) {
   });
 }
 
-function startClipboardWatch() {
+function startClipboardWatch(): void {
   if (clipboardWatchTimer) return;
   lastClipboardText = clipboard.readText();
   clipboardWatchTimer = setInterval(() => {
@@ -278,13 +337,13 @@ function startClipboardWatch() {
   }, 800);
 }
 
-function stopClipboardWatch() {
+function stopClipboardWatch(): void {
   if (!clipboardWatchTimer) return;
   clearInterval(clipboardWatchTimer);
   clipboardWatchTimer = null;
 }
 
-async function copyCurrentSelection() {
+async function copyCurrentSelection(): Promise<void> {
   if (process.platform !== "win32") return;
 
   await execFileAsync(
@@ -305,7 +364,7 @@ async function copyCurrentSelection() {
   );
 }
 
-async function readExternalSelection() {
+async function readExternalSelection(): Promise<ExternalSelectionResult> {
   const originalText = clipboard.readText();
   const marker = `__TRANSLATE_DESK_SELECTION_${Date.now()}__`;
   suppressClipboardEventsUntil = Date.now() + 2500;
@@ -330,7 +389,7 @@ async function readExternalSelection() {
       text: "",
       source: "selection",
     };
-  } catch (error) {
+  } catch (error: unknown) {
     return {
       text: "",
       source: "selection",
@@ -343,7 +402,7 @@ async function readExternalSelection() {
   }
 }
 
-function registerShortcuts() {
+function registerShortcuts(): void {
   globalShortcut.register("CommandOrControl+Space", async () => {
     const selection = await readExternalSelection();
     const text = selection.text || clipboard.readText().trim();
@@ -357,7 +416,7 @@ function registerShortcuts() {
 }
 
 ipcMain.handle("clipboard:get-text", () => clipboard.readText());
-ipcMain.handle("clipboard:write-text", (_event, text) => {
+ipcMain.handle("clipboard:write-text", (_event: IpcMainInvokeEvent, text: unknown) => {
   clipboard.writeText(String(text ?? ""));
 });
 ipcMain.handle("clipboard:start-watch", () => {
@@ -371,8 +430,8 @@ ipcMain.handle("clipboard:stop-watch", () => {
 ipcMain.handle("selection:read", async () => {
   return readExternalSelection();
 });
-ipcMain.handle("floating:show", (_event, payload) => {
-  showFloating(payload);
+ipcMain.handle("floating:show", (_event: IpcMainInvokeEvent, payload: FloatingPayload) => {
+  showFloating(payload ?? {});
   return true;
 });
 ipcMain.handle("floating:hide", () => {
@@ -388,7 +447,7 @@ ipcMain.handle("wordbook:load", async () => {
     return [];
   }
 });
-ipcMain.handle("wordbook:save", async (_event, entries) => {
+ipcMain.handle("wordbook:save", async (_event: IpcMainInvokeEvent, entries: unknown) => {
   const safeEntries = Array.isArray(entries) ? entries : [];
   await fs.mkdir(path.dirname(getWordbookPath()), { recursive: true });
   await fs.writeFile(getWordbookPath(), JSON.stringify(safeEntries, null, 2), "utf8");
@@ -415,7 +474,8 @@ ipcMain.handle("ocr:recognize-primary", async () => {
 });
 ipcMain.handle("ocr:select-region", async () => {
   const capture = await capturePrimaryScreen();
-  if (!capture.dataUrl) {
+  const dataUrl = capture.dataUrl;
+  if (!dataUrl) {
     return {
       ...capture,
       text: "",
@@ -424,12 +484,13 @@ ipcMain.handle("ocr:select-region", async () => {
     };
   }
 
-  return new Promise((resolve) => {
-    activeCaptureSelection = { capture, resolve };
-    createCaptureWindow(capture);
+  return new Promise<CaptureSelectionResult>((resolve) => {
+    const selectableCapture = { ...capture, dataUrl };
+    activeCaptureSelection = { capture: selectableCapture, resolve };
+    createCaptureWindow(selectableCapture);
   });
 });
-ipcMain.handle("capture:submit", async (_event, selection) => {
+ipcMain.handle("capture:submit", async (_event: IpcMainInvokeEvent, selection: SelectionRect) => {
   if (!activeCaptureSelection) return false;
 
   const { capture, resolve } = activeCaptureSelection;
