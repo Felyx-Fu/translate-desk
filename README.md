@@ -7,7 +7,8 @@ Translate Desk is a Windows-focused English-Chinese translation desktop app buil
 - English-Chinese and Chinese-English translation workspace.
 - Direction detection for edited source text.
 - Clipboard monitoring in desktop mode.
-- Ctrl+Space floating translation window.
+- Ctrl+Space floating translation window using selected text from other Windows applications when available.
+- Selection translation action that preserves and restores the user's clipboard.
 - Wordbook persistence through Electron user data.
 - Reading through the Web Speech API when available.
 - Screenshot region OCR first pass through `tesseract.js` for English text.
@@ -49,6 +50,8 @@ node --check electron\main.cjs
 node --check electron\preload.cjs
 npx electron . --smoke-test
 ```
+
+Contribution and pull request rules are documented in `CONTRIBUTING.md`.
 
 ## Release Policy
 

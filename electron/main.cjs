@@ -8,9 +8,13 @@ const {
   nativeImage,
   screen,
 } = require("electron");
+const { execFile } = require("node:child_process");
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { promisify } = require("node:util");
 const Tesseract = require("tesseract.js");
+
+const execFileAsync = promisify(execFile);
 
 const devServerArg = process.argv.find((arg) => arg.startsWith("--dev-server="));
 const devServerUrl = devServerArg ? devServerArg.split("=")[1] : null;
@@ -23,6 +27,11 @@ let clipboardWatchTimer;
 let lastClipboardText = "";
 let pendingFloatingPayload = null;
 let activeCaptureSelection = null;
+let suppressClipboardEventsUntil = 0;
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function appFile(...segments) {
   return path.join(__dirname, "..", ...segments);
@@ -258,6 +267,10 @@ function startClipboardWatch() {
   lastClipboardText = clipboard.readText();
   clipboardWatchTimer = setInterval(() => {
     const text = clipboard.readText().trim();
+    if (Date.now() < suppressClipboardEventsUntil) {
+      lastClipboardText = text;
+      return;
+    }
     if (text && text !== lastClipboardText) {
       lastClipboardText = text;
       emitClipboardText(text);
@@ -271,11 +284,75 @@ function stopClipboardWatch() {
   clipboardWatchTimer = null;
 }
 
+async function copyCurrentSelection() {
+  if (process.platform !== "win32") return;
+
+  await execFileAsync(
+    "powershell.exe",
+    [
+      "-NoProfile",
+      "-Sta",
+      "-NonInteractive",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-Command",
+      "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^c')",
+    ],
+    {
+      timeout: 2500,
+      windowsHide: true,
+    },
+  );
+}
+
+async function readExternalSelection() {
+  const originalText = clipboard.readText();
+  const marker = `__TRANSLATE_DESK_SELECTION_${Date.now()}__`;
+  suppressClipboardEventsUntil = Date.now() + 2500;
+
+  try {
+    clipboard.writeText(marker);
+    await delay(80);
+    await copyCurrentSelection();
+
+    for (let index = 0; index < 12; index += 1) {
+      await delay(80);
+      const copiedText = clipboard.readText();
+      if (copiedText && copiedText !== marker) {
+        return {
+          text: copiedText.trim(),
+          source: "selection",
+        };
+      }
+    }
+
+    return {
+      text: "",
+      source: "selection",
+    };
+  } catch (error) {
+    return {
+      text: "",
+      source: "selection",
+      error: error instanceof Error ? error.message : String(error),
+    };
+  } finally {
+    clipboard.writeText(originalText);
+    lastClipboardText = originalText.trim();
+    suppressClipboardEventsUntil = Date.now() + 800;
+  }
+}
+
 function registerShortcuts() {
-  globalShortcut.register("CommandOrControl+Space", () => {
-    const text = clipboard.readText().trim();
-    showFloating({ source: text });
-    mainWindow?.webContents.send("shortcut:translate", { text });
+  globalShortcut.register("CommandOrControl+Space", async () => {
+    const selection = await readExternalSelection();
+    const text = selection.text || clipboard.readText().trim();
+    showFloating({ source: text, sourceKind: selection.text ? "selection" : "clipboard" });
+    mainWindow?.webContents.send("shortcut:translate", {
+      text,
+      sourceKind: selection.text ? "selection" : "clipboard",
+      error: selection.error ?? null,
+    });
   });
 }
 
@@ -290,6 +367,9 @@ ipcMain.handle("clipboard:start-watch", () => {
 ipcMain.handle("clipboard:stop-watch", () => {
   stopClipboardWatch();
   return true;
+});
+ipcMain.handle("selection:read", async () => {
+  return readExternalSelection();
 });
 ipcMain.handle("floating:show", (_event, payload) => {
   showFloating(payload);

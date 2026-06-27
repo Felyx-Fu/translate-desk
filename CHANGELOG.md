@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0 - 2026-06-27
+
+### Added
+
+- Added Windows external selected-text translation for Ctrl+Space and the workbench selection-translation action.
+- Preserves and restores the user's clipboard while reading selected text from other applications.
+- Suppresses clipboard history updates during internal selected-text capture so the clipboard page is not polluted by implementation details.
+- Added Dependabot configuration for npm and GitHub Actions updates.
+- Added issue and pull request templates for bug, feature, release-impact, and desktop-security tracking.
+- Expanded CI with manual dispatch, concurrency, Electron smoke test, and production dependency audit.
+
 ## 0.2.1 - 2026-06-27
 
 ### Added

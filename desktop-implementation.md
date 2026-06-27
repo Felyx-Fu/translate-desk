@@ -10,6 +10,7 @@
 - Electron Windows desktop shell with a main workbench window.
 - Secure preload bridge with controlled APIs for clipboard, wordbook persistence, screen capture, shortcuts, and floating window control.
 - Ctrl+Space global shortcut opens a compact floating translation window using the current clipboard text.
+- Ctrl+Space and the selection translation action can read selected text from other Windows applications by temporarily copying the selection, translating it, and restoring the user's original clipboard.
 - Clipboard listener polls local clipboard changes and pushes copied text into the clipboard page.
 - Wordbook entries persist through Electron `app.getPath("userData")/wordbook.json`; browser preview falls back to `localStorage`.
 - Source and target copy actions write to the system clipboard in desktop mode.
@@ -20,7 +21,7 @@
 - Translation is still the current local sample translator, not a production model. Next step: plug in a real local dictionary/model or configurable API provider.
 - OCR accuracy is first-pass English recognition through `tesseract.js`. Next step: evaluate PaddleOCR or Windows OCR for stronger small-text recognition.
 - OCR region selection currently targets the primary display. Next step: support multi-display selection.
-- Selected-text translation currently uses selected text inside the app or clipboard text. Next step: implement the standard desktop flow that copies current external selection, restores clipboard, then translates.
+- Selected-text translation uses Windows SendKeys to copy the active external selection. Next step: evaluate a lower-level native hook if SendKeys proves unreliable in some applications.
 - Windows installer packaging is not configured yet. Next step: add `electron-builder` or equivalent packaging after core features stabilize.
 
 **Verified**

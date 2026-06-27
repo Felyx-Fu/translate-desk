@@ -24,6 +24,9 @@ contextBridge.exposeInMainWorld("desktop", {
   shortcuts: {
     onTranslate: (callback) => subscribe("shortcut:translate", callback),
   },
+  selection: {
+    read: () => ipcRenderer.invoke("selection:read"),
+  },
   screen: {
     capturePrimary: () => ipcRenderer.invoke("screen:capture-primary"),
   },

@@ -777,8 +777,16 @@ function MainApp() {
   async function handleSelectionTranslate() {
     const desktop = getDesktop();
     const selectedText = window.getSelection?.().toString().trim();
+    const externalSelection =
+      !selectedText && desktop?.selection
+        ? await desktop.selection.read()
+        : null;
     const clipboardText = desktop ? await desktop.clipboard.getText() : "";
-    const source = selectedText || clipboardText?.trim() || sourceText;
+    const source =
+      selectedText ||
+      externalSelection?.text?.trim() ||
+      clipboardText?.trim() ||
+      sourceText;
     const payload = applyTranslation(source);
     setCommandPayload(payload);
     setTopPanel("command");

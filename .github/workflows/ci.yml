@@ -6,6 +6,14 @@ on:
     tags: ["v*"]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
@@ -32,3 +40,9 @@ jobs:
 
       - name: Check Electron preload syntax
         run: node --check electron\preload.cjs
+
+      - name: Electron smoke test
+        run: npx electron . --smoke-test
+
+      - name: Audit production dependencies
+        run: npm audit --audit-level=moderate --omit=dev

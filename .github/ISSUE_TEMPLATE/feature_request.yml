@@ -1,0 +1,33 @@
+name: Feature request
+description: Propose a focused improvement for Translate Desk.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What workflow problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the smallest useful version of the feature.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Mention simpler workarounds or approaches if relevant.
+    validations:
+      required: false
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification idea
+      description: How should we know this works?
+    validations:
+      required: false
