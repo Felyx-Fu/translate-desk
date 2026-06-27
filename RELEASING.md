@@ -19,6 +19,8 @@ npm audit --audit-level=moderate --omit=dev
 npm run dist:win
 ```
 
+The normal Windows release artifact should be a portable `.exe` file. The legacy ZIP packager is still available through `npm run dist:win:zip` when a zipped app folder is needed for troubleshooting.
+
 ## Release Steps
 
 ```powershell
@@ -33,7 +35,7 @@ git commit -m "release vX.Y.Z"
 git tag vX.Y.Z
 git push
 git push origin vX.Y.Z
-gh release create vX.Y.Z --title "vX.Y.Z" --notes-file CHANGELOG.md release\*.zip
+gh release create vX.Y.Z --title "vX.Y.Z" --notes-file CHANGELOG.md release\*.exe
 ```
 
 For security fixes, include a short security note in the release notes without exposing exploit details that are not already public.

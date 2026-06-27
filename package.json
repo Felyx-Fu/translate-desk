@@ -1,6 +1,6 @@
 {
   "name": "translator-prototype",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "type": "module",
   "main": "dist-electron/main.cjs",
@@ -9,7 +9,8 @@
     "desktop": "concurrently -k -s first \"npm:dev\" \"npm:desktop:open\"",
     "desktop:open": "npm run build:electron && wait-on http://127.0.0.1:5173 && electron . --dev-server=http://127.0.0.1:5173",
     "desktop:preview": "npm run build && electron .",
-    "dist:win": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-win-portable.ps1",
+    "dist:win": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-win-exe.ps1",
+    "dist:win:zip": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-win-portable.ps1",
     "build": "npm run typecheck && npm run build:electron && vite build",
     "build:electron": "tsc -p tsconfig.electron.json",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.electron.json",
@@ -17,21 +18,50 @@
   },
   "description": "Quiet Windows desktop translator for English-Chinese workflows.",
   "author": "Felyx-Fu",
+  "build": {
+    "appId": "cn.translatedesk.app",
+    "productName": "Translate Desk",
+    "asar": false,
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "dist-electron/main.cjs"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Translate.Desk-${version}-win-${arch}-portable.exe"
+    }
+  },
   "dependencies": {
-    "@fluentui/react-icons": "^2.0.331",
-    "@vitejs/plugin-react": "5.0.4",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "tesseract.js": "^7.0.0",
-    "vite": "^6.4.3"
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
+    "@fluentui/react-icons": "^2.0.331",
     "@types/node": "^26.0.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "5.0.4",
     "concurrently": "^10.0.3",
     "electron": "^42.5.0",
+    "electron-builder": "^26.15.3",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
     "typescript": "^6.0.3",
+    "vite": "^6.4.3",
     "wait-on": "^9.0.10"
   }
 }

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.1 - 2026-06-27
+
+### Fixed
+
+- Changed the default Windows release artifact from a portable ZIP to a portable `.exe`.
+- Added `electron-builder` packaging for `Translate.Desk-0.4.1-win-x64-portable.exe`.
+
+### Changed
+
+- Improved the GitHub README structure and presentation for the Windows desktop translator project.
+
 ## 0.4.0 - 2026-06-27
 
 ### Changed
