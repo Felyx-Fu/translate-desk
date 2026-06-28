@@ -1,0 +1,32 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Translate Desk multilingual small icon</title>
+  <desc id="desc">Small-size multilingual icon optimized for taskbar and tray use.</desc>
+  <defs>
+    <linearGradient id="bg" x1="38" y1="26" x2="218" y2="232" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1F6254"/>
+      <stop offset="1" stop-color="#123E38"/>
+    </linearGradient>
+    <linearGradient id="card" x1="52" y1="46" x2="204" y2="214" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DCEBE7"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="60" y1="58" x2="198" y2="208" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D9B56C"/>
+      <stop offset="1" stop-color="#8A6A2F"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="#F5F7F7"/>
+  <rect x="20" y="20" width="216" height="216" rx="52" fill="url(#bg)"/>
+  <rect x="50" y="48" width="84" height="128" rx="24" fill="url(#card)" stroke="#CFE2DC" stroke-width="7"/>
+  <rect x="122" y="80" width="84" height="128" rx="24" fill="#F7FBFA" stroke="#D7E4E0" stroke-width="7"/>
+  <circle cx="128" cy="128" r="44" fill="#FDFEFE" stroke="#FFFFFF" stroke-width="6"/>
+  <path d="M84 128H172" stroke="#1F6254" stroke-width="8" stroke-linecap="round" opacity="0.86"/>
+  <path d="M128 84C116 96 108 112 108 128C108 144 116 160 128 172" stroke="#1F6254" stroke-width="8" stroke-linecap="round" opacity="0.74"/>
+  <path d="M128 84C140 96 148 112 148 128C148 144 140 160 128 172" stroke="#1F6254" stroke-width="8" stroke-linecap="round" opacity="0.74"/>
+  <path d="M74 80H110" stroke="#1F6254" stroke-width="10" stroke-linecap="round"/>
+  <path d="M148 178H184" stroke="#1F6254" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="82" cy="110" r="7" fill="#D9B56C"/>
+  <circle cx="176" cy="150" r="7" fill="#D9B56C"/>
+  <path d="M66 198C94 216 134 220 166 204" stroke="url(#gold)" stroke-width="12" stroke-linecap="round"/>
+  <path d="M160 188L194 196L172 222" stroke="url(#gold)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
