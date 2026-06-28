@@ -1,5 +1,79 @@
 import type { BrowserWindow as BrowserWindowType, IpcMainInvokeEvent } from "electron";
 
+/**
+ * Logging utility for Electron main process
+ */
+type LogLevel = "info" | "warn" | "error" | "debug";
+
+interface LogEntry {
+  level: LogLevel;
+  message: string;
+  timestamp: string;
+  data?: unknown;
+}
+
+class Logger {
+  private logs: LogEntry[] = [];
+  private maxLogs = 500;
+
+  log(level: LogLevel, message: string, data?: unknown): void {
+    const entry: LogEntry = {
+      level,
+      message,
+      timestamp: new Date().toISOString(),
+      data,
+    };
+
+    this.logs.push(entry);
+    if (this.logs.length > this.maxLogs) {
+      this.logs.shift();
+    }
+
+    const prefix = `[${level.toUpperCase()}]`;
+    const msg = data ? `${prefix} ${message} %O` : `${prefix} ${message}`;
+
+    switch (level) {
+      case "error":
+        console.error(msg, data);
+        break;
+      case "warn":
+        console.warn(msg, data);
+        break;
+      case "debug":
+        console.debug(msg, data);
+        break;
+      default:
+        console.log(msg, data);
+    }
+  }
+
+  info(message: string, data?: unknown): void {
+    this.log("info", message, data);
+  }
+
+  warn(message: string, data?: unknown): void {
+    this.log("warn", message, data);
+  }
+
+  error(message: string, data?: unknown): void {
+    this.log("error", message, data);
+  }
+
+  debug(message: string, data?: unknown): void {
+    this.log("debug", message, data);
+  }
+
+  getLogs(): LogEntry[] {
+    return [...this.logs];
+  }
+
+  clearLogs(): void {
+    this.logs = [];
+  }
+}
+
+const logger = new Logger();
+
 const {
   app,
   BrowserWindow,
@@ -181,6 +255,7 @@ function cropCapture(
 }
 
 function createMainWindow(): void {
+  logger.info("Creating main window");
   mainWindow = new BrowserWindow({
     width: 1248,
     height: 860,
@@ -199,14 +274,22 @@ function createMainWindow(): void {
 
   // Add detailed error handling
   mainWindow.webContents.on("did-fail-load", (event, errorCode, errorDescription) => {
-    console.error(`Failed to load: ${errorCode} ${errorDescription}`);
+    logger.error("Failed to load main window", {
+      errorCode,
+      errorDescription,
+    });
   });
 
   mainWindow.webContents.on("render-process-gone", (event, details) => {
-    console.error(`WebContents render process gone: ${details.reason}`);
+    logger.error("WebContents render process gone", { reason: details.reason });
+  });
+
+  mainWindow.webContents.on("did-finish-load", () => {
+    logger.info("Main window loaded successfully");
   });
 
   mainWindow.on("closed", () => {
+    logger.info("Main window closed");
     mainWindow = null;
   });
 }
@@ -417,8 +500,13 @@ async function readExternalSelection(): Promise<ExternalSelectionResult> {
 
 function registerShortcuts(): void {
   globalShortcut.register("CommandOrControl+Space", async () => {
+    logger.debug("Shortcut triggered: Ctrl+Space");
     const selection = await readExternalSelection();
     const text = selection.text || clipboard.readText().trim();
+    logger.debug("Translation triggered", {
+      sourceLength: text.length,
+      sourceKind: selection.text ? "selection" : "clipboard",
+    });
     showFloating({ source: text, sourceKind: selection.text ? "selection" : "clipboard" });
     mainWindow?.webContents.send("shortcut:translate", {
       text,
@@ -426,44 +514,77 @@ function registerShortcuts(): void {
       error: selection.error ?? null,
     });
   });
+  logger.info("Global shortcuts registered");
 }
 
-ipcMain.handle("clipboard:get-text", () => clipboard.readText());
+ipcMain.handle("clipboard:get-text", () => {
+  const text = clipboard.readText();
+  logger.debug("Clipboard text read", { length: text.length });
+  return text;
+});
+
 ipcMain.handle("clipboard:write-text", (_event: IpcMainInvokeEvent, text: unknown) => {
   clipboard.writeText(String(text ?? ""));
+  logger.debug("Clipboard text written", { length: String(text ?? "").length });
 });
+
 ipcMain.handle("clipboard:start-watch", () => {
   startClipboardWatch();
+  logger.info("Clipboard watch started");
   return true;
 });
+
 ipcMain.handle("clipboard:stop-watch", () => {
   stopClipboardWatch();
+  logger.info("Clipboard watch stopped");
   return true;
 });
-ipcMain.handle("selection:read", async () => {
-  return readExternalSelection();
+
+ipcMain.handle("ocr:recognize-primary", async () => {
+  logger.info("OCR recognition started");
+  const capture = await capturePrimaryScreen();
+  if (!capture.dataUrl) {
+    logger.warn("No screen capture available for OCR");
+    return {
+      ...capture,
+      text: "",
+      confidence: 0,
+      error: "No screen capture available",
+    };
+  }
+
+  const result = await recognizeImage(capture.dataUrl, {
+    name: capture.name,
+    region: null,
+  });
+  logger.info("OCR recognition completed", {
+    textLength: result.text.length,
+    confidence: result.confidence,
+    hasError: !!result.error,
+  });
+  return result;
 });
-ipcMain.handle("floating:show", (_event: IpcMainInvokeEvent, payload: FloatingPayload) => {
-  showFloating(payload ?? {});
-  return true;
-});
-ipcMain.handle("floating:hide", () => {
-  floatingWindow?.hide();
-  return true;
-});
+
 ipcMain.handle("wordbook:load", async () => {
   try {
     const raw = await fs.readFile(getWordbookPath(), "utf8");
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
+    const entries = Array.isArray(parsed) ? parsed : [];
+    logger.debug("Wordbook loaded", { entryCount: entries.length });
+    return entries;
+  } catch (error: unknown) {
+    logger.warn("Failed to load wordbook", {
+      message: error instanceof Error ? error.message : String(error),
+    });
     return [];
   }
 });
+
 ipcMain.handle("wordbook:save", async (_event: IpcMainInvokeEvent, entries: unknown) => {
   const safeEntries = Array.isArray(entries) ? entries : [];
   await fs.mkdir(path.dirname(getWordbookPath()), { recursive: true });
   await fs.writeFile(getWordbookPath(), JSON.stringify(safeEntries, null, 2), "utf8");
+  logger.debug("Wordbook saved", { entryCount: safeEntries.length });
   return true;
 });
 ipcMain.handle("screen:capture-primary", async () => {
@@ -527,28 +648,35 @@ ipcMain.handle("capture:cancel", () => {
 });
 
 app.whenReady().then(() => {
+  logger.info("Application ready");
   createMainWindow();
   createFloatingWindow();
   startClipboardWatch();
   registerShortcuts();
+  logger.info("All windows and services initialized");
 
   if (isSmokeTest) {
+    logger.info("Smoke test mode enabled");
     setTimeout(() => {
+      logger.info("Smoke test passed");
       console.log("electron-smoke-ok");
       app.quit();
     }, 1500);
   }
 
   app.on("activate", () => {
+    logger.debug("App activated");
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });
 });
 
 app.on("window-all-closed", () => {
+  logger.info("All windows closed");
   if (process.platform !== "darwin") app.quit();
 });
 
 app.on("will-quit", () => {
+  logger.info("Application will quit");
   stopClipboardWatch();
   globalShortcut.unregisterAll();
 });

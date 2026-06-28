@@ -11,6 +11,7 @@ import type {
   SelectionRect,
   WordbookEntry,
 } from "./desktop";
+import { getTranslation, detectChineseContent } from "./translations";
 
 const englishDefault =
   "The contract requires the supplier to provide written notice within five business days after receiving the updated delivery schedule.";
@@ -53,7 +54,7 @@ const clipboardHistory = [
 ];
 
 function hasChinese(value: string): boolean {
-  return /[\u4e00-\u9fff]/.test(value);
+  return detectChineseContent(value);
 }
 
 function detectDirection(value: string): Direction | null {
@@ -67,6 +68,15 @@ function translateText(value: string, mode: Direction): string {
   if (!input) return "";
 
   const resolvedMode = mode === "自动检测" ? detectDirection(input) : mode;
+  const toChinese = resolvedMode === "英 → 中";
+
+  // Try the enhanced translation system first
+  const translation = getTranslation(input, toChinese);
+  if (translation && translation !== input) {
+    return translation;
+  }
+
+  // Fallback to original logic for edge cases
   const lower = input.toLowerCase();
 
   if (resolvedMode === "中 → 英") {
@@ -103,8 +113,18 @@ function speakText(value: string, onDone?: () => void): void {
 
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(value);
-  utterance.lang = hasChinese(value) ? "zh-CN" : "en-US";
-  utterance.rate = 1;
+  
+  // Detect language and set appropriate properties
+  if (hasChinese(value)) {
+    utterance.lang = "zh-CN";
+    utterance.rate = 0.9; // Slightly slower for clarity
+  } else {
+    utterance.lang = "en-US";
+    utterance.rate = 1;
+  }
+  
+  utterance.pitch = 1;
+  utterance.volume = 1;
   utterance.onend = () => onDone?.();
   utterance.onerror = () => onDone?.();
   window.speechSynthesis.speak(utterance);
