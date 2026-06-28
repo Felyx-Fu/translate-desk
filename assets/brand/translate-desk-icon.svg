@@ -1,0 +1,61 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Translate Desk multilingual app icon</title>
+  <desc id="desc">A calm Windows desktop translation icon with layered language cards, a globe lens, and bidirectional orbit arrows for multilingual workflows.</desc>
+  <defs>
+    <linearGradient id="td-bg" x1="144" y1="104" x2="880" y2="920" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1F6254"/>
+      <stop offset="0.52" stop-color="#185F50"/>
+      <stop offset="1" stop-color="#123E38"/>
+    </linearGradient>
+    <linearGradient id="td-card-a" x1="226" y1="184" x2="500" y2="812" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#EAF3F0"/>
+    </linearGradient>
+    <linearGradient id="td-card-b" x1="520" y1="220" x2="790" y2="816" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FBFCFC"/>
+      <stop offset="1" stop-color="#DCEBE7"/>
+    </linearGradient>
+    <linearGradient id="td-globe" x1="324" y1="282" x2="704" y2="704" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FDFEFE"/>
+      <stop offset="1" stop-color="#CFE2DC"/>
+    </linearGradient>
+    <linearGradient id="td-accent" x1="260" y1="238" x2="764" y2="780" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D9B56C"/>
+      <stop offset="1" stop-color="#8A6A2F"/>
+    </linearGradient>
+    <filter id="td-shadow" x="104" y="96" width="816" height="840" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="36" stdDeviation="42" flood-color="#0E2522" flood-opacity="0.32"/>
+    </filter>
+    <filter id="td-card-shadow" x="160" y="154" width="704" height="732" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="30" flood-color="#123E38" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="224" fill="#F5F7F7"/>
+  <rect x="96" y="96" width="832" height="832" rx="198" fill="url(#td-bg)" filter="url(#td-shadow)"/>
+
+  <rect x="214" y="208" width="342" height="530" rx="86" fill="url(#td-card-a)" stroke="#CFE2DC" stroke-width="18" filter="url(#td-card-shadow)"/>
+  <rect x="468" y="286" width="342" height="530" rx="86" fill="url(#td-card-b)" stroke="#D7E4E0" stroke-width="18" filter="url(#td-card-shadow)"/>
+
+  <circle cx="512" cy="512" r="168" fill="url(#td-globe)" stroke="#FFFFFF" stroke-width="18"/>
+  <path d="M344 512H680" stroke="#1F6254" stroke-width="22" stroke-linecap="round" opacity="0.82"/>
+  <path d="M512 344C466 384 440 443 440 512C440 581 466 640 512 680" stroke="#1F6254" stroke-width="20" stroke-linecap="round" opacity="0.74"/>
+  <path d="M512 344C558 384 584 443 584 512C584 581 558 640 512 680" stroke="#1F6254" stroke-width="20" stroke-linecap="round" opacity="0.74"/>
+  <path d="M392 414C424 438 466 452 512 452C558 452 600 438 632 414" stroke="#1F6254" stroke-width="18" stroke-linecap="round" opacity="0.58"/>
+  <path d="M392 610C424 586 466 572 512 572C558 572 600 586 632 610" stroke="#1F6254" stroke-width="18" stroke-linecap="round" opacity="0.58"/>
+
+  <path d="M290 328H426" stroke="#1F6254" stroke-width="26" stroke-linecap="round"/>
+  <path d="M290 398H390" stroke="#B7CCC6" stroke-width="22" stroke-linecap="round"/>
+  <path d="M290 468H362" stroke="#B7CCC6" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="426" cy="468" r="16" fill="#D9B56C"/>
+
+  <path d="M598 642H734" stroke="#1F6254" stroke-width="26" stroke-linecap="round"/>
+  <path d="M634 572H734" stroke="#B7CCC6" stroke-width="22" stroke-linecap="round"/>
+  <path d="M662 502H734" stroke="#B7CCC6" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="598" cy="502" r="16" fill="#D9B56C"/>
+
+  <path d="M328 760C404 824 520 842 624 792" stroke="url(#td-accent)" stroke-width="34" stroke-linecap="round"/>
+  <path d="M616 728L704 752L645 821" stroke="url(#td-accent)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M696 264C620 200 504 182 400 232" stroke="url(#td-accent)" stroke-width="34" stroke-linecap="round"/>
+  <path d="M408 296L320 272L379 203" stroke="url(#td-accent)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

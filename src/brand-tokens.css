@@ -1,0 +1,164 @@
+:root {
+  /* Translate Desk / Calm Multilingual Desk brand tokens
+     Import this after existing styles when you want to gradually migrate UI colors. */
+
+  /* Core palette */
+  --td-ink-900: #142022;
+  --td-ink-800: #20272b;
+  --td-ink-700: #354246;
+  --td-ink-600: #4a5559;
+  --td-ink-500: #687377;
+  --td-ink-400: #8a969a;
+
+  --td-paper-000: #ffffff;
+  --td-paper-050: #fbfcfc;
+  --td-paper-100: #f8fafa;
+  --td-paper-150: #f5f7f7;
+  --td-paper-200: #eef4f2;
+  --td-paper-300: #e6f1ee;
+
+  --td-green-900: #123e38;
+  --td-green-800: #164c42;
+  --td-green-700: #185f50;
+  --td-green-600: #1f6254;
+  --td-green-200: #cfe2dc;
+  --td-green-100: #e6f1ee;
+
+  --td-amber-800: #8a6a2f;
+  --td-amber-600: #a98238;
+  --td-amber-300: #d9b56c;
+  --td-amber-100: #fcf8f0;
+
+  --td-purple-700: #6e4c95;
+  --td-purple-100: #f4f0fa;
+
+  /* Semantic roles */
+  --td-bg: var(--td-paper-150);
+  --td-surface: var(--td-paper-000);
+  --td-surface-soft: var(--td-paper-100);
+  --td-surface-muted: var(--td-paper-200);
+  --td-border: #dce3e5;
+  --td-border-soft: #e7ecee;
+  --td-text: var(--td-ink-800);
+  --td-text-muted: var(--td-ink-500);
+  --td-primary: var(--td-green-600);
+  --td-primary-hover: var(--td-green-700);
+  --td-primary-active: var(--td-green-800);
+  --td-primary-soft: var(--td-green-100);
+  --td-warning: var(--td-amber-800);
+  --td-warning-soft: var(--td-amber-100);
+  --td-info: var(--td-purple-700);
+  --td-info-soft: var(--td-purple-100);
+
+  /* Multilingual UI roles */
+  --td-language-source: var(--td-green-600);
+  --td-language-target: var(--td-amber-800);
+  --td-language-auto: var(--td-purple-700);
+  --td-language-card-bg: var(--td-paper-050);
+  --td-language-card-border: var(--td-green-200);
+
+  /* Type */
+  --td-font-sans: "Noto Sans SC", "Microsoft YaHei UI", "Segoe UI", Arial, sans-serif;
+  --td-font-mono: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+  --td-font-size-xs: 12px;
+  --td-font-size-sm: 13px;
+  --td-font-size-md: 15px;
+  --td-font-size-lg: 18px;
+  --td-font-size-xl: 22px;
+  --td-line-tight: 1.25;
+  --td-line-normal: 1.5;
+  --td-line-reading: 1.65;
+
+  /* Radius */
+  --td-radius-xs: 8px;
+  --td-radius-sm: 10px;
+  --td-radius-md: 12px;
+  --td-radius-lg: 16px;
+  --td-radius-window: 18px;
+  --td-radius-pill: 999px;
+
+  /* Elevation */
+  --td-shadow-window: 0 34px 68px rgba(18, 30, 34, 0.1);
+  --td-shadow-popover: 0 28px 68px rgba(17, 27, 31, 0.16);
+  --td-shadow-dialog: 0 30px 80px rgba(17, 27, 31, 0.22);
+
+  /* Motion */
+  --td-motion-fast: 120ms ease-out;
+  --td-motion-normal: 180ms ease-out;
+  --td-motion-slow: 260ms ease-out;
+}
+
+.td-theme {
+  color: var(--td-text);
+  background: var(--td-bg);
+  font-family: var(--td-font-sans);
+}
+
+.td-card {
+  color: var(--td-text);
+  background: var(--td-surface);
+  border: 1px solid var(--td-border);
+  border-radius: var(--td-radius-md);
+}
+
+.td-primary-button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  color: #fff;
+  background: var(--td-primary);
+  border: 0;
+  border-radius: var(--td-radius-pill);
+  font: 700 var(--td-font-size-sm) / 1 var(--td-font-sans);
+  transition:
+    background var(--td-motion-fast),
+    transform var(--td-motion-fast),
+    box-shadow var(--td-motion-fast);
+}
+
+.td-primary-button:hover {
+  background: var(--td-primary-hover);
+  box-shadow: 0 10px 24px rgba(31, 98, 84, 0.2);
+}
+
+.td-primary-button:active {
+  background: var(--td-primary-active);
+  transform: translateY(1px);
+}
+
+.td-quiet-button {
+  min-height: 34px;
+  padding: 0 14px;
+  color: var(--td-primary);
+  background: var(--td-paper-050);
+  border: 1px solid var(--td-green-200);
+  border-radius: var(--td-radius-xs);
+  font: 700 var(--td-font-size-xs) / 1 var(--td-font-sans);
+}
+
+.td-quiet-button:hover {
+  background: var(--td-primary-soft);
+}
+
+.td-language-card {
+  color: var(--td-text);
+  background: var(--td-language-card-bg);
+  border: 1px solid var(--td-language-card-border);
+  border-radius: var(--td-radius-md);
+}
+
+.td-language-chip {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  color: var(--td-primary);
+  background: var(--td-primary-soft);
+  border: 1px solid var(--td-green-200);
+  border-radius: var(--td-radius-pill);
+  font: 700 var(--td-font-size-xs) / 1 var(--td-font-sans);
+}

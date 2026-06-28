@@ -1,4 +1,5 @@
 import type { Direction } from "../../desktop";
+import { detectChineseContent, getTranslation } from "../../translations";
 
 export const englishDefault =
   "The contract requires the supplier to provide written notice within five business days after receiving the updated delivery schedule.";
@@ -9,7 +10,7 @@ export const chineseDefault =
 export const languageDirections = ["英 → 中", "中 → 英", "自动检测"] satisfies Direction[];
 
 export function hasChinese(value: string): boolean {
-  return /[\u4e00-\u9fff]/.test(value);
+  return detectChineseContent(value);
 }
 
 export function detectDirection(value: string): Direction | null {
@@ -23,6 +24,9 @@ export function translateText(value: string, mode: Direction): string {
   if (!input) return "";
 
   const resolvedMode = mode === "自动检测" ? detectDirection(input) : mode;
+  const enhancedTranslation = getTranslation(input, resolvedMode !== "中 → 英");
+  if (enhancedTranslation && enhancedTranslation !== input) return enhancedTranslation;
+
   const lower = input.toLowerCase();
 
   if (resolvedMode === "中 → 英") {

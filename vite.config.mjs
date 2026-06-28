@@ -7,8 +7,18 @@ export default defineConfig({
   },
   server: {
     warmup: {
-      clientFiles: ["./src/main.jsx"],
+      clientFiles: ["./src/main.tsx"],
     },
   },
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom"],
+          icons: ["@fluentui/react-icons"],
+        },
+      },
+    },
+  },
 });

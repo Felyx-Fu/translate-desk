@@ -117,8 +117,18 @@ function speakText(value: string, onDone?: () => void): void {
 
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(value);
-  utterance.lang = hasChinese(value) ? "zh-CN" : "en-US";
-  utterance.rate = 1;
+  
+  // Detect language and set appropriate properties
+  if (hasChinese(value)) {
+    utterance.lang = "zh-CN";
+    utterance.rate = 0.9; // Slightly slower for clarity
+  } else {
+    utterance.lang = "en-US";
+    utterance.rate = 1;
+  }
+  
+  utterance.pitch = 1;
+  utterance.volume = 1;
   utterance.onend = () => onDone?.();
   utterance.onerror = () => onDone?.();
   window.speechSynthesis.speak(utterance);
