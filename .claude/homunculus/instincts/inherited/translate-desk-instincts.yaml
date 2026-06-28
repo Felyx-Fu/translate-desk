@@ -1,0 +1,316 @@
+# Instincts generated from https://github.com/Felyx-Fu/translate-desk
+# Generated: 2026-06-28T05:13:40.361Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: translate-desk-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/Felyx-Fu/translate-desk
+---
+
+# Translate Desk Commit Length
+
+## Action
+
+Keep commit messages concise (~21 characters)
+
+## Evidence
+
+- Average commit message length: 21 chars
+- Based on 2 commits
+
+---
+id: translate-desk-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Felyx-Fu/translate-desk
+---
+
+# Translate Desk Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: translate-desk-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Felyx-Fu/translate-desk
+---
+
+# Translate Desk Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: translate-desk-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Felyx-Fu/translate-desk
+---
+
+# Translate Desk Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: translate-desk-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/Felyx-Fu/translate-desk
+---
+
+# Translate Desk Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: translate-desk-instinct-file-naming-camelCase
+trigger: "When creating a new file in the codebase"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Felyx-Fu/translate-desk
+---
+
+# Translate Desk Instinct File Naming CamelCase
+
+## Action
+
+Name the file using camelCase convention
+
+## Evidence
+
+- Pattern in namingConventions.files: camelCase
+
+---
+id: translate-desk-instinct-function-naming-camelCase
+trigger: "When defining a new function"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: Felyx-Fu/translate-desk
+---
+
+# Translate Desk Instinct Function Naming CamelCase
+
+## Action
+
+Name the function using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.functions: camelCase
+
+---
+id: translate-desk-instinct-class-naming-PascalCase
+trigger: "When defining a new class"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: Felyx-Fu/translate-desk
+---
+
+# Translate Desk Instinct Class Naming PascalCase
+
+## Action
+
+Name the class using PascalCase
+
+## Evidence
+
+- Pattern in namingConventions.classes: PascalCase
+
+---
+id: translate-desk-instinct-constant-naming-SCREAMING_SNAKE_CASE
+trigger: "When declaring a constant"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: Felyx-Fu/translate-desk
+---
+
+# Translate Desk Instinct Constant Naming SCREAMING_SNAKE_CASE
+
+## Action
+
+Use SCREAMING_SNAKE_CASE for constant names
+
+## Evidence
+
+- Pattern in namingConventions.constants: SCREAMING_SNAKE_CASE
+
+---
+id: translate-desk-instinct-import-style-relative
+trigger: "When importing modules within the project"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Felyx-Fu/translate-desk
+---
+
+# Translate Desk Instinct Import Style Relative
+
+## Action
+
+Use relative import paths
+
+## Evidence
+
+- Pattern in importStyle: relative
+
+---
+id: translate-desk-instinct-export-style-named
+trigger: "When exporting functions, classes, or constants"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Felyx-Fu/translate-desk
+---
+
+# Translate Desk Instinct Export Style Named
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- Pattern in exportStyle: named
+
+---
+id: translate-desk-instinct-typescript-language
+trigger: "When writing new code"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: Felyx-Fu/translate-desk
+---
+
+# Translate Desk Instinct Typescript Language
+
+## Action
+
+Use TypeScript as the programming language
+
+## Evidence
+
+- Pattern in language: TypeScript
+
+---
+id: translate-desk-instinct-error-handling-try-catch
+trigger: "When handling potential errors in code"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Felyx-Fu/translate-desk
+---
+
+# Translate Desk Instinct Error Handling Try Catch
+
+## Action
+
+Use try-catch blocks for error handling
+
+## Evidence
+
+- Pattern in errorHandling.style: try-catch
+
+---
+id: translate-desk-instinct-test-location-separate
+trigger: "When creating new test files"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: Felyx-Fu/translate-desk
+---
+
+# Translate Desk Instinct Test Location Separate
+
+## Action
+
+Place test files in a separate directory from source files
+
+## Evidence
+
+- Pattern in architecture.testLocation: separate
+
+---
+id: translate-desk-instinct-git-commit-freeform
+trigger: "When writing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: Felyx-Fu/translate-desk
+---
+
+# Translate Desk Instinct Git Commit Freeform
+
+## Action
+
+Use a freeform commit message without a required prefix
+
+## Evidence
+
+- Pattern in commits.type: freeform
+- Examples: '深度优化：增强翻译功能、改进构建配置、添加日志系统'
+
+---
+id: translate-desk-instinct-git-commit-length-short
+trigger: "When composing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: Felyx-Fu/translate-desk
+---
+
+# Translate Desk Instinct Git Commit Length Short
+
+## Action
+
+Keep the commit message concise, around 20-25 characters if possible
+
+## Evidence
+
+- Pattern in commits.averageLength: 21
+
