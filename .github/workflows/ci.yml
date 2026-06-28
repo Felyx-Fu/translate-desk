@@ -42,7 +42,9 @@ jobs:
         run: node --check dist-electron\preload.cjs
 
       - name: Electron smoke test
-        run: npx electron . --smoke-test
+        run: .\node_modules\electron\dist\electron.exe .
+        env:
+          ELECTRON_SMOKE_TEST: "1"
 
       - name: Audit production dependencies
         run: npm audit --audit-level=moderate --omit=dev
