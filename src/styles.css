@@ -42,6 +42,48 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.error-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 32px;
+  background: var(--bg);
+}
+
+.error-shell section {
+  width: min(420px, 100%);
+  padding: 28px;
+  background: #fff;
+  border: 1px solid #d7dddf;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.error-shell h1 {
+  margin: 0;
+  color: #1c262a;
+  font-size: 20px;
+}
+
+.error-shell p {
+  margin: 14px 0 22px;
+  color: #536b65;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.error-shell button {
+  min-height: 36px;
+  padding: 0 16px;
+  color: #fff;
+  background: var(--green);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 button {
   font: inherit;
 }
@@ -302,6 +344,11 @@ button {
   color: var(--green);
 }
 
+.panel-actions button:disabled {
+  color: #a2aaad;
+  cursor: not-allowed;
+}
+
 .ocr-strip {
   display: flex;
   min-height: 110px;
@@ -313,6 +360,14 @@ button {
   background: var(--amber-soft);
   border: 1px solid #eaddc4;
   border-radius: 12px;
+}
+
+.translation-status {
+  min-height: 20px;
+  margin: 14px 0 0;
+  color: #697579;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .ocr-strip p {
@@ -344,10 +399,19 @@ button {
 }
 
 .ocr-layout,
-.wordbook-grid {
+.wordbook-grid,
+.ocr-compare-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(210px, 0.8fr);
   gap: 20px;
+}
+
+.ocr-compare-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+.ocr-editor {
+  min-height: 138px;
 }
 
 .capture-frame.large {
@@ -455,6 +519,122 @@ button {
 .settings-card {
   background: #eef4f2;
   border-color: #d0ded9;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.settings-section {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  background: #fbfcfc;
+  border: 1px solid #dde3e5;
+  border-radius: 12px;
+}
+
+.settings-section h3 {
+  margin: 0 0 4px;
+  color: #1c262a;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.settings-section label,
+.readonly-setting,
+.toggle-row {
+  display: grid;
+  gap: 8px;
+  color: #4b565a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.settings-section select,
+.settings-section input:not([type="checkbox"]) {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  color: #263033;
+  background: #fff;
+  border: 1px solid #d9dfe2;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.toggle-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.toggle-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+}
+
+.readonly-setting {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  background: #f7f8f8;
+  border: 1px solid #e1e6e8;
+  border-radius: 8px;
+}
+
+.readonly-setting strong {
+  color: #1d4b42;
+  font-size: 12px;
+}
+
+.shortcut-status {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  background: #fcf8f0;
+  border: 1px solid #eaddc4;
+  border-radius: 8px;
+}
+
+.shortcut-status.is-ok {
+  background: #eef4f2;
+  border-color: #d0ded9;
+}
+
+.shortcut-status strong {
+  color: #315d52;
+  font-size: 12px;
+}
+
+.shortcut-status span {
+  color: #536b65;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settings-note {
+  margin-top: 4px;
+  padding: 14px;
+  background: #eef4f2;
+  border: 1px solid #d0ded9;
+  border-radius: 10px;
+}
+
+.settings-note strong {
+  color: #315d52;
+  font-size: 13px;
+}
+
+.settings-note p {
+  margin: 8px 0 0;
+  color: #536b65;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .floating-panel,
@@ -890,6 +1070,11 @@ button {
   gap: 12px;
 }
 
+.floating-shell header div,
+.floating-shell footer {
+  flex-wrap: wrap;
+}
+
 .floating-shell header strong {
   color: #1d2a2d;
   font-size: 13px;
@@ -905,6 +1090,11 @@ button {
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
+}
+
+.floating-shell button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
 }
 
 .floating-shell textarea {
@@ -1087,6 +1277,8 @@ button {
   .translation-grid,
   .ocr-layout,
   .wordbook-grid,
+  .ocr-compare-grid,
+  .settings-grid,
   .right-rail,
   .capture-preview {
     display: grid;

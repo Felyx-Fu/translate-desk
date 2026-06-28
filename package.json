@@ -1,6 +1,6 @@
 {
-  "name": "translator-prototype",
-  "version": "0.4.2",
+  "name": "translate-desk",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "repository": {
@@ -21,7 +21,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.electron.json",
     "preview": "vite preview --host 127.0.0.1"
   },
-  "description": "Quiet Windows desktop translator for English-Chinese workflows.",
+  "description": "A quiet Windows desktop translator for English-Chinese office workflows.",
   "author": "Felyx-Fu",
   "build": {
     "appId": "cn.translatedesk.app",

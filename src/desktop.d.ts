@@ -40,6 +40,12 @@ export type ShortcutPayload = {
   error?: string | null;
 };
 
+export type ShortcutStatus = {
+  accelerator: string;
+  registered: boolean;
+  error: string | null;
+};
+
 export type CapturePayload = {
   name: string;
   dataUrl: string | null;
@@ -85,7 +91,10 @@ export type DesktopApi = {
     onPayload: (callback: (payload: FloatingPayload) => void) => () => void;
   };
   shortcuts: {
+    getStatus: () => Promise<ShortcutStatus>;
+    setAccelerator: (accelerator: string) => Promise<ShortcutStatus>;
     onTranslate: (callback: (payload: ShortcutPayload) => void) => () => void;
+    onStatus: (callback: (payload: ShortcutStatus) => void) => () => void;
   };
   selection: {
     read: () => Promise<SelectionReadResult>;
