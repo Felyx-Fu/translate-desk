@@ -7,7 +7,7 @@
 - Change type: feature / refactor
 - Change summary: moved settings load/save persistence into `src/services/settings`, kept the renderer using a narrow settings service boundary, and fixed the Electron smoke-test command path.
 - Affected modules: settings center, translation defaults, renderer startup, CI, release workflow.
-- Verification: `npm run build` passed; `node --check dist-electron/main.cjs` and `node --check dist-electron/preload.cjs` passed; `ELECTRON_SMOKE_TEST=1 .\node_modules\electron\dist\electron.exe .` printed `electron-smoke-ok`; local preview loaded at `http://127.0.0.1:5173/`.
+- Verification: `npm run build` passed; `node --check dist-electron/main.cjs` and `node --check dist-electron/preload.cjs` passed; `ELECTRON_SMOKE_TEST=1 .\node_modules\.bin\electron.cmd .` printed `electron-smoke-ok`; local preview loaded at `http://127.0.0.1:5173/`.
 - GitHub: pending push/PR.
 
 ### refactor: extract translation service module
