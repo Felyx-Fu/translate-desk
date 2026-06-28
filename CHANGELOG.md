@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Moved settings persistence into `src/services/settings` to prepare the v0.6.0 settings center work.
+
 ## 0.5.0 - 2026-06-28
 
 ### Added

@@ -2,6 +2,14 @@
 
 ## 2026-06-28
 
+### feat: add settings storage service
+
+- Change type: feature / refactor
+- Change summary: moved settings load/save persistence into `src/services/settings` and kept the renderer using a narrow settings service boundary.
+- Affected modules: settings center, translation defaults, renderer startup.
+- Verification: `npm run build` passed; `node --check dist-electron/main.cjs` and `node --check dist-electron/preload.cjs` passed; local preview loaded at `http://127.0.0.1:5173/`.
+- GitHub: pending push/PR.
+
 ### refactor: extract translation service module
 
 - Change type: refactor / documentation

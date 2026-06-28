@@ -25,13 +25,13 @@ import {
   englishDefault,
   hasChinese,
   languageDirections,
-  loadSettings,
   translateText,
   translationProviders,
   translateWithSettings,
   type TranslationProvider,
   type TranslationSettings,
 } from "./services/translation";
+import { loadSettings, saveSettings } from "./services/settings";
 
 const navItems = [
   "翻译工作台",
@@ -1029,7 +1029,7 @@ function MainApp() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("translate-desk-settings", JSON.stringify(settings));
+    saveSettings(settings);
   }, [settings]);
 
   useEffect(() => {

@@ -8,7 +8,6 @@ export {
 } from "./localTranslator";
 export {
   defaultSettings,
-  loadSettings,
   normalizeSettings,
   translationProviders,
   translateWithSettings,
