@@ -1,15 +1,20 @@
 {
   "name": "translator-prototype",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "private": true,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Felyx-Fu/translate-desk"
+  },
   "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "desktop": "concurrently -k -s first \"npm:dev\" \"npm:desktop:open\"",
     "desktop:open": "npm run build:electron && wait-on http://127.0.0.1:5173 && electron . --dev-server=http://127.0.0.1:5173",
     "desktop:preview": "npm run build && electron .",
-    "dist:win": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-win-exe.ps1",
+    "dist:win": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-win-installer.ps1",
+    "dist:win:portable": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-win-exe.ps1",
     "dist:win:zip": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-win-portable.ps1",
     "build": "npm run typecheck && npm run build:electron && vite build",
     "build:electron": "tsc -p tsconfig.electron.json",
@@ -37,13 +42,26 @@
     "win": {
       "target": [
         {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
           "target": "portable",
           "arch": [
             "x64"
           ]
         }
       ],
-      "artifactName": "Translate.Desk-${version}-win-${arch}-portable.exe"
+      "artifactName": "Translate.Desk-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Translate Desk"
     }
   },
   "dependencies": {

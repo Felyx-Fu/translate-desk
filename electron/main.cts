@@ -197,6 +197,15 @@ function createMainWindow(): void {
 
   loadRenderer(mainWindow);
 
+  // Add detailed error handling
+  mainWindow.webContents.on("did-fail-load", (event, errorCode, errorDescription) => {
+    console.error(`Failed to load: ${errorCode} ${errorDescription}`);
+  });
+
+  mainWindow.webContents.on("render-process-gone", (event, details) => {
+    console.error(`WebContents render process gone: ${details.reason}`);
+  });
+
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
@@ -238,6 +247,10 @@ function createFloatingWindow(): BrowserWindowType {
       floatingWindow.webContents.send("floating:payload", pendingFloatingPayload);
       pendingFloatingPayload = null;
     }
+  });
+
+  floatingWindow.webContents.on("did-fail-load", (event, errorCode, errorDescription) => {
+    console.error(`Floating window failed to load: ${errorCode} ${errorDescription}`);
   });
 
   floatingWindow.on("closed", () => {
