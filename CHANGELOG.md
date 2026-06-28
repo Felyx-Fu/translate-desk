@@ -12,9 +12,14 @@
 
 ### Changed
 
+- Extracted translation engine code into `src/services/translation` so API translation, local fallback, and translation settings are easier to maintain.
 - Updated package metadata and browser title to the formal Translate Desk product name.
 - Improved the floating translator with pin, source/translation toggle, copy, speech, and wordbook actions.
 - Replaced developer-style crash UI with a Chinese user-facing reload prompt.
+
+### Documentation
+
+- Added `PROJECT_PLAN.md`, `ROADMAP.md`, and `DEVELOPMENT_LOG.md` to preserve the project plan and development trace.
 
 ## 0.4.2 - 2026-06-28
 

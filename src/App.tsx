@@ -19,12 +19,19 @@ import type {
   ShortcutStatus,
   WordbookEntry,
 } from "./desktop";
-
-const englishDefault =
-  "The contract requires the supplier to provide written notice within five business days after receiving the updated delivery schedule.";
-
-const chineseDefault =
-  "合同要求供应商在收到更新后的交付计划后五个工作日内提供书面通知。";
+import {
+  chineseDefault,
+  detectDirection,
+  englishDefault,
+  hasChinese,
+  languageDirections,
+  loadSettings,
+  translateText,
+  translationProviders,
+  translateWithSettings,
+  type TranslationProvider,
+  type TranslationSettings,
+} from "./services/translation";
 
 const navItems = [
   "翻译工作台",
@@ -39,32 +46,6 @@ const navItems = [
 type ActiveNav = (typeof navItems)[number];
 type TopPanel = "search" | "command" | "settings" | null;
 type Point = Pick<SelectionRect, "x" | "y">;
-type TranslationProvider = "免费翻译 API" | "用户 API Key" | "离线规则";
-
-type TranslationSettings = {
-  provider: TranslationProvider;
-  apiEndpoint: string;
-  apiKey: string;
-  defaultDirection: Direction;
-  autoDetect: boolean;
-  officePolish: boolean;
-  keepHistory: boolean;
-  selectionShortcut: string;
-};
-
-const languageDirections = ["英 → 中", "中 → 英", "自动检测"] satisfies Direction[];
-const translationProviders = ["免费翻译 API", "用户 API Key", "离线规则"] satisfies TranslationProvider[];
-
-const defaultSettings: TranslationSettings = {
-  provider: "免费翻译 API",
-  apiEndpoint: "https://libretranslate.com/translate",
-  apiKey: "",
-  defaultDirection: "英 → 中",
-  autoDetect: true,
-  officePolish: true,
-  keepHistory: true,
-  selectionShortcut: "CommandOrControl+Space",
-};
 
 type ErrorBoundaryState = {
   error: Error | null;
@@ -114,128 +95,6 @@ const clipboardHistory = [
   "Payment instructions must remain unchanged.",
   "Within five business days.",
 ];
-
-function hasChinese(value: string): boolean {
-  return /[\u4e00-\u9fff]/.test(value);
-}
-
-function detectDirection(value: string): Direction | null {
-  const input = value.trim();
-  if (!input) return null;
-  return hasChinese(input) ? "中 → 英" : "英 → 中";
-}
-
-function translateText(value: string, mode: Direction): string {
-  const input = value.trim();
-  if (!input) return "";
-
-  const resolvedMode = mode === "自动检测" ? detectDirection(input) : mode;
-  const lower = input.toLowerCase();
-
-  if (resolvedMode === "中 → 英") {
-    if (input.includes("合同要求供应商")) return englishDefault;
-    if (input.includes("付款说明")) return "Payment instructions must remain unchanged.";
-    if (input.includes("五个工作日")) return "within five business days";
-    return `Offline English draft: ${input}`;
-  }
-
-  if (lower.includes("payment instructions")) return "付款说明必须保持不变。";
-  if (lower.includes("the contract requires") || lower.includes("supplier")) return chineseDefault;
-  if (lower.includes("within five business days")) return "五个工作日内。";
-  return `离线中文译文草稿：${input}`;
-}
-
-function getTranslationLangPair(mode: Direction): { source: "en" | "zh"; target: "en" | "zh" } {
-  return mode === "中 → 英"
-    ? { source: "zh", target: "en" }
-    : { source: "en", target: "zh" };
-}
-
-function normalizeSettings(value: unknown): TranslationSettings {
-  if (!value || typeof value !== "object") return defaultSettings;
-  const settings = value as Partial<TranslationSettings>;
-  return {
-    provider: translationProviders.includes(settings.provider as TranslationProvider)
-      ? (settings.provider as TranslationProvider)
-      : defaultSettings.provider,
-    apiEndpoint: typeof settings.apiEndpoint === "string" && settings.apiEndpoint.trim()
-      ? settings.apiEndpoint.trim()
-      : defaultSettings.apiEndpoint,
-    apiKey: typeof settings.apiKey === "string" ? settings.apiKey : "",
-    defaultDirection: languageDirections.includes(settings.defaultDirection as Direction)
-      ? (settings.defaultDirection as Direction)
-      : defaultSettings.defaultDirection,
-    autoDetect: typeof settings.autoDetect === "boolean" ? settings.autoDetect : defaultSettings.autoDetect,
-    officePolish: typeof settings.officePolish === "boolean" ? settings.officePolish : defaultSettings.officePolish,
-    keepHistory: typeof settings.keepHistory === "boolean" ? settings.keepHistory : defaultSettings.keepHistory,
-    selectionShortcut: typeof settings.selectionShortcut === "string" && settings.selectionShortcut.trim()
-      ? settings.selectionShortcut.trim()
-      : defaultSettings.selectionShortcut,
-  };
-}
-
-function loadSettings(): TranslationSettings {
-  if (typeof localStorage === "undefined") return defaultSettings;
-  try {
-    return normalizeSettings(JSON.parse(localStorage.getItem("translate-desk-settings") || "null"));
-  } catch {
-    return defaultSettings;
-  }
-}
-
-async function translateWithSettings(
-  value: string,
-  mode: Direction,
-  settings: TranslationSettings,
-): Promise<{ text: string; usedFallback: boolean; error: string | null }> {
-  const input = value.trim();
-  if (!input) return { text: "", usedFallback: false, error: null };
-
-  const resolvedMode = mode === "自动检测" ? detectDirection(input) || settings.defaultDirection : mode;
-  const fallback = translateText(input, resolvedMode);
-  if (settings.provider === "离线规则") {
-    return { text: fallback, usedFallback: true, error: null };
-  }
-
-  const { source, target } = getTranslationLangPair(resolvedMode);
-  try {
-    if (settings.provider === "用户 API Key") {
-      if (!settings.apiKey.trim()) {
-        return { text: fallback, usedFallback: true, error: "请先在设置中心填写 API Key。" };
-      }
-      const response = await fetch(settings.apiEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          q: input,
-          source,
-          target,
-          format: "text",
-          api_key: settings.apiKey.trim(),
-        }),
-      });
-      if (!response.ok) throw new Error(`翻译服务返回 ${response.status}`);
-      const data = await response.json() as { translatedText?: string };
-      return { text: data.translatedText?.trim() || fallback, usedFallback: !data.translatedText, error: null };
-    }
-
-    const params = new URLSearchParams({
-      q: input,
-      langpair: `${source}|${target === "zh" ? "zh-CN" : target}`,
-    });
-    const response = await fetch(`https://api.mymemory.translated.net/get?${params.toString()}`);
-    if (!response.ok) throw new Error(`翻译服务返回 ${response.status}`);
-    const data = await response.json() as { responseData?: { translatedText?: string } };
-    const translatedText = data.responseData?.translatedText?.trim();
-    return { text: translatedText || fallback, usedFallback: !translatedText, error: null };
-  } catch (error) {
-    return {
-      text: fallback,
-      usedFallback: true,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
 
 function getDesktop(): DesktopApi | null {
   return typeof window !== "undefined" ? window.desktop ?? null : null;
