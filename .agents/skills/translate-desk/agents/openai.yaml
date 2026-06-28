@@ -1,0 +1,6 @@
+interface:
+  display_name: "Translate Desk"
+  short_description: "Repo-specific patterns and workflows for translate-desk"
+  default_prompt: "Use the translate-desk repo skill to follow existing architecture, testing, and workflow conventions."
+policy:
+  allow_implicit_invocation: true
