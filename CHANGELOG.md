@@ -1,6 +1,25 @@
 # Changelog
 
-## 0.4.1 - 2026-06-27
+## 0.4.2 - 2026-06-28
+
+### Added
+
+- NSIS Windows installer with standard installation wizard experience.
+- Installation directory selection during setup.
+- Desktop shortcuts and Start menu shortcuts creation options.
+- React error boundary component for graceful error handling.
+- Detailed error logging in Electron main process for diagnostics.
+
+### Fixed
+
+- Fixed page loading failures by adding error handlers to all window types (main, floating, capture).
+- Improved error recovery with error boundary showing user-friendly error messages.
+
+### Changed
+
+- Updated package.json to include `dist:win` command for building both NSIS and portable installers.
+- Added repository metadata to package.json.
+- Enhanced error handling in Electron windows with `did-fail-load` event listeners.
 
 ### Fixed
 
