@@ -14,8 +14,8 @@
 
 - [x] Add settings center UI.
 - [x] Persist basic settings locally.
+- [x] Move settings persistence into `src/services/settings`.
 - [x] Configure translation provider, endpoint, API key, direction, history, and shortcut.
-- [ ] Move settings persistence into a dedicated settings service.
 - [ ] Validate shortcut input before applying it.
 
 ## v0.7.0 - OCR Workflow

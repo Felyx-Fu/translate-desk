@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Moved settings persistence into `src/services/settings` to prepare the v0.6.0 settings center work.
+
+### Fixed
+
+- Updated Electron smoke testing to use the packaged Electron executable and avoid duplicate OCR IPC handler registration.
+
 ## 0.5.0 - 2026-06-28
 
 ### Added

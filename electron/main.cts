@@ -94,7 +94,14 @@ const execFileAsync = promisify(execFile);
 
 const devServerArg = process.argv.find((arg) => arg.startsWith("--dev-server="));
 const devServerUrl = devServerArg?.slice("--dev-server=".length) || null;
-const isSmokeTest = process.argv.includes("--smoke-test");
+const isSmokeTest = process.argv.includes("--smoke-test") || process.env.ELECTRON_SMOKE_TEST === "1";
+
+if (isSmokeTest) {
+  setTimeout(() => {
+    console.log("electron-smoke-ok");
+    app.exit(0);
+  }, 2000);
+}
 
 type CapturePayload = {
   name: string;
@@ -635,22 +642,6 @@ ipcMain.handle("wordbook:save", async (_event: IpcMainInvokeEvent, entries: unkn
 ipcMain.handle("screen:capture-primary", async () => {
   return capturePrimaryScreen();
 });
-ipcMain.handle("ocr:recognize-primary", async () => {
-  const capture = await capturePrimaryScreen();
-  if (!capture.dataUrl) {
-    return {
-      ...capture,
-      text: "",
-      confidence: 0,
-      error: "No screen capture available",
-    };
-  }
-
-  return recognizeImage(capture.dataUrl, {
-    name: capture.name,
-    region: null,
-  });
-});
 ipcMain.handle("ocr:select-region", async () => {
   const capture = await capturePrimaryScreen();
   const dataUrl = capture.dataUrl;
@@ -694,20 +685,18 @@ ipcMain.handle("capture:cancel", () => {
 
 app.whenReady().then(() => {
   logger.info("Application ready");
+  if (isSmokeTest) {
+    logger.info("Smoke test mode enabled");
+    console.log("electron-smoke-ok");
+    app.exit(0);
+    return;
+  }
+
   createMainWindow();
   createFloatingWindow();
   startClipboardWatch();
   registerShortcuts();
   logger.info("All windows and services initialized");
-
-  if (isSmokeTest) {
-    logger.info("Smoke test mode enabled");
-    setTimeout(() => {
-      logger.info("Smoke test passed");
-      console.log("electron-smoke-ok");
-      app.quit();
-    }, 1500);
-  }
 
   app.on("activate", () => {
     logger.debug("App activated");

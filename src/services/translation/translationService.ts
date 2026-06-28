@@ -39,15 +39,6 @@ export function normalizeSettings(value: unknown): TranslationSettings {
   };
 }
 
-export function loadSettings(): TranslationSettings {
-  if (typeof localStorage === "undefined") return defaultSettings;
-  try {
-    return normalizeSettings(JSON.parse(localStorage.getItem("translate-desk-settings") || "null"));
-  } catch {
-    return defaultSettings;
-  }
-}
-
 export async function translateWithSettings(
   value: string,
   mode: Direction,
