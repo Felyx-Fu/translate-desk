@@ -7,7 +7,7 @@ $releaseRoot = Join-Path $root "release"
 $package = Get-Content -Raw (Join-Path $root "package.json") | ConvertFrom-Json
 $version = $package.version
 $artifactName = "Translate.Desk-$version-win-x64-portable.exe"
-$sourceArtifact = Join-Path $builderOutput $artifactName
+$sourceArtifact = Join-Path $builderOutput "Translate.Desk-$version-win-x64.exe"
 $releaseArtifact = Join-Path $releaseRoot $artifactName
 
 function Remove-WithinRoot($path, $allowedRoot) {

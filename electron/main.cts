@@ -62,6 +62,12 @@ type FloatingPayload = {
   sourceKind?: string;
 };
 
+type ShortcutStatus = {
+  accelerator: string;
+  registered: boolean;
+  error: string | null;
+};
+
 type ExternalSelectionResult = {
   text: string;
   source: "selection";
@@ -76,6 +82,12 @@ let lastClipboardText = "";
 let pendingFloatingPayload: { source: string } | null = null;
 let activeCaptureSelection: ActiveCaptureSelection | null = null;
 let suppressClipboardEventsUntil = 0;
+let shortcutAccelerator = "CommandOrControl+Space";
+let shortcutStatus: ShortcutStatus = {
+  accelerator: shortcutAccelerator,
+  registered: false,
+  error: null,
+};
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -415,18 +427,51 @@ async function readExternalSelection(): Promise<ExternalSelectionResult> {
   }
 }
 
-function registerShortcuts(): void {
-  globalShortcut.register("CommandOrControl+Space", async () => {
-    const selection = await readExternalSelection();
-    const text = selection.text || clipboard.readText().trim();
-    showFloating({ source: text, sourceKind: selection.text ? "selection" : "clipboard" });
-    mainWindow?.webContents.send("shortcut:translate", {
-      text,
-      sourceKind: selection.text ? "selection" : "clipboard",
-      error: selection.error ?? null,
-    });
+async function triggerSelectionTranslate(): Promise<void> {
+  const selection = await readExternalSelection();
+  const text = selection.text || clipboard.readText().trim();
+  showFloating({ source: text, sourceKind: selection.text ? "selection" : "clipboard" });
+  mainWindow?.webContents.send("shortcut:translate", {
+    text,
+    sourceKind: selection.text ? "selection" : "clipboard",
+    error: selection.error ?? null,
   });
 }
+
+function registerTranslateShortcut(accelerator = shortcutAccelerator): ShortcutStatus {
+  try {
+    if (shortcutStatus.registered) {
+      globalShortcut.unregister(shortcutAccelerator);
+    }
+    shortcutAccelerator = accelerator.trim() || "CommandOrControl+Space";
+    const registered = globalShortcut.register(shortcutAccelerator, () => {
+      void triggerSelectionTranslate();
+    });
+    shortcutStatus = {
+      accelerator: shortcutAccelerator,
+      registered,
+      error: registered ? null : "快捷键注册失败，可能已被输入法、IDE 或系统工具占用。",
+    };
+  } catch (error: unknown) {
+    shortcutStatus = {
+      accelerator,
+      registered: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  mainWindow?.webContents.send("shortcut:status", shortcutStatus);
+  return shortcutStatus;
+}
+
+function registerShortcuts(): void {
+  registerTranslateShortcut(shortcutAccelerator);
+}
+
+ipcMain.handle("shortcuts:get-status", () => shortcutStatus);
+ipcMain.handle("shortcuts:set-accelerator", (_event: IpcMainInvokeEvent, accelerator: unknown) => {
+  return registerTranslateShortcut(String(accelerator ?? ""));
+});
 
 ipcMain.handle("clipboard:get-text", () => clipboard.readText());
 ipcMain.handle("clipboard:write-text", (_event: IpcMainInvokeEvent, text: unknown) => {

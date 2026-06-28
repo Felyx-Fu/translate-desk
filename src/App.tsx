@@ -1,4 +1,11 @@
-import { useEffect, useState, type ReactNode, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  Component,
+  useEffect,
+  useState,
+  type ErrorInfo,
+  type ReactNode,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { Dismiss24Regular } from "@fluentui/react-icons";
 import type {
   CapturePayload,
@@ -9,6 +16,7 @@ import type {
   OcrResultState,
   OcrSelectResult,
   SelectionRect,
+  ShortcutStatus,
   WordbookEntry,
 } from "./desktop";
 
@@ -20,6 +28,7 @@ const chineseDefault =
 
 const navItems = [
   "翻译工作台",
+  "设置中心",
   "截图 OCR",
   "剪贴板监听",
   "生词本",
@@ -30,8 +39,62 @@ const navItems = [
 type ActiveNav = (typeof navItems)[number];
 type TopPanel = "search" | "command" | "settings" | null;
 type Point = Pick<SelectionRect, "x" | "y">;
+type TranslationProvider = "免费翻译 API" | "用户 API Key" | "离线规则";
+
+type TranslationSettings = {
+  provider: TranslationProvider;
+  apiEndpoint: string;
+  apiKey: string;
+  defaultDirection: Direction;
+  autoDetect: boolean;
+  officePolish: boolean;
+  keepHistory: boolean;
+  selectionShortcut: string;
+};
 
 const languageDirections = ["英 → 中", "中 → 英", "自动检测"] satisfies Direction[];
+const translationProviders = ["免费翻译 API", "用户 API Key", "离线规则"] satisfies TranslationProvider[];
+
+const defaultSettings: TranslationSettings = {
+  provider: "免费翻译 API",
+  apiEndpoint: "https://libretranslate.com/translate",
+  apiKey: "",
+  defaultDirection: "英 → 中",
+  autoDetect: true,
+  officePolish: true,
+  keepHistory: true,
+  selectionShortcut: "CommandOrControl+Space",
+};
+
+type ErrorBoundaryState = {
+  error: Error | null;
+};
+
+class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { error: null };
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo): void {
+    console.error("Translate Desk crashed", error, info);
+  }
+
+  render(): ReactNode {
+    if (!this.state.error) return this.props.children;
+
+    return (
+      <main className="error-shell">
+        <section>
+          <h1>程序遇到了一点问题</h1>
+          <p>你可以尝试重新加载应用。如果问题仍然存在，请反馈日志信息。</p>
+          <button type="button" onClick={() => window.location.reload()}>重新加载</button>
+        </section>
+      </main>
+    );
+  }
+}
 
 const quickStatus = [
   "划词后显示悬浮窗",
@@ -80,6 +143,98 @@ function translateText(value: string, mode: Direction): string {
   if (lower.includes("the contract requires") || lower.includes("supplier")) return chineseDefault;
   if (lower.includes("within five business days")) return "五个工作日内。";
   return `离线中文译文草稿：${input}`;
+}
+
+function getTranslationLangPair(mode: Direction): { source: "en" | "zh"; target: "en" | "zh" } {
+  return mode === "中 → 英"
+    ? { source: "zh", target: "en" }
+    : { source: "en", target: "zh" };
+}
+
+function normalizeSettings(value: unknown): TranslationSettings {
+  if (!value || typeof value !== "object") return defaultSettings;
+  const settings = value as Partial<TranslationSettings>;
+  return {
+    provider: translationProviders.includes(settings.provider as TranslationProvider)
+      ? (settings.provider as TranslationProvider)
+      : defaultSettings.provider,
+    apiEndpoint: typeof settings.apiEndpoint === "string" && settings.apiEndpoint.trim()
+      ? settings.apiEndpoint.trim()
+      : defaultSettings.apiEndpoint,
+    apiKey: typeof settings.apiKey === "string" ? settings.apiKey : "",
+    defaultDirection: languageDirections.includes(settings.defaultDirection as Direction)
+      ? (settings.defaultDirection as Direction)
+      : defaultSettings.defaultDirection,
+    autoDetect: typeof settings.autoDetect === "boolean" ? settings.autoDetect : defaultSettings.autoDetect,
+    officePolish: typeof settings.officePolish === "boolean" ? settings.officePolish : defaultSettings.officePolish,
+    keepHistory: typeof settings.keepHistory === "boolean" ? settings.keepHistory : defaultSettings.keepHistory,
+    selectionShortcut: typeof settings.selectionShortcut === "string" && settings.selectionShortcut.trim()
+      ? settings.selectionShortcut.trim()
+      : defaultSettings.selectionShortcut,
+  };
+}
+
+function loadSettings(): TranslationSettings {
+  if (typeof localStorage === "undefined") return defaultSettings;
+  try {
+    return normalizeSettings(JSON.parse(localStorage.getItem("translate-desk-settings") || "null"));
+  } catch {
+    return defaultSettings;
+  }
+}
+
+async function translateWithSettings(
+  value: string,
+  mode: Direction,
+  settings: TranslationSettings,
+): Promise<{ text: string; usedFallback: boolean; error: string | null }> {
+  const input = value.trim();
+  if (!input) return { text: "", usedFallback: false, error: null };
+
+  const resolvedMode = mode === "自动检测" ? detectDirection(input) || settings.defaultDirection : mode;
+  const fallback = translateText(input, resolvedMode);
+  if (settings.provider === "离线规则") {
+    return { text: fallback, usedFallback: true, error: null };
+  }
+
+  const { source, target } = getTranslationLangPair(resolvedMode);
+  try {
+    if (settings.provider === "用户 API Key") {
+      if (!settings.apiKey.trim()) {
+        return { text: fallback, usedFallback: true, error: "请先在设置中心填写 API Key。" };
+      }
+      const response = await fetch(settings.apiEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          q: input,
+          source,
+          target,
+          format: "text",
+          api_key: settings.apiKey.trim(),
+        }),
+      });
+      if (!response.ok) throw new Error(`翻译服务返回 ${response.status}`);
+      const data = await response.json() as { translatedText?: string };
+      return { text: data.translatedText?.trim() || fallback, usedFallback: !data.translatedText, error: null };
+    }
+
+    const params = new URLSearchParams({
+      q: input,
+      langpair: `${source}|${target === "zh" ? "zh-CN" : target}`,
+    });
+    const response = await fetch(`https://api.mymemory.translated.net/get?${params.toString()}`);
+    if (!response.ok) throw new Error(`翻译服务返回 ${response.status}`);
+    const data = await response.json() as { responseData?: { translatedText?: string } };
+    const translatedText = data.responseData?.translatedText?.trim();
+    return { text: translatedText || fallback, usedFallback: !translatedText, error: null };
+  } catch (error) {
+    return {
+      text: fallback,
+      usedFallback: true,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 function getDesktop(): DesktopApi | null {
@@ -288,11 +443,13 @@ type TranslationWorkspaceProps = {
   direction: Direction;
   sourceText: string;
   targetText: string;
+  translationStatus: string;
   speaking: boolean;
   saved: boolean;
   onDirectionChange: (direction: Direction) => void;
   onSourceChange: (value: string) => void;
   onTargetChange: (value: string) => void;
+  onTranslate: () => void;
   onSpeakToggle: () => void;
   onSave: () => void;
   onSelectionTranslate: () => void;
@@ -306,11 +463,13 @@ function TranslationWorkspace({
   direction,
   sourceText,
   targetText,
+  translationStatus,
   speaking,
   saved,
   onDirectionChange,
   onSourceChange,
   onTargetChange,
+  onTranslate,
   onSpeakToggle,
   onSave,
   onSelectionTranslate,
@@ -339,6 +498,7 @@ function TranslationWorkspace({
             onChange={(event) => onSourceChange(event.target.value)}
           />
           <div className="panel-actions">
+            <button type="button" onClick={onTranslate}>翻译</button>
             <button type="button" onClick={onSelectionTranslate}>划词翻译</button>
             <button type="button" onClick={onSpeakToggle}>
               {speaking ? "停止" : "朗读"}
@@ -365,6 +525,8 @@ function TranslationWorkspace({
         </article>
       </div>
 
+      <p className="translation-status">{translationStatus}</p>
+
       <article className="ocr-strip">
         <div>
           <div className="panel-label">截图 OCR 翻译</div>
@@ -380,14 +542,31 @@ function TranslationWorkspace({
 
 type OcrWorkspaceProps = OcrResultProps & {
   onOcrOpen: () => void;
+  onTextChange: (value: string) => void;
+  onTranslationChange: (value: string) => void;
+  onRetranslate: () => void;
+  onCopyOriginal: () => void;
+  onCopyTranslation: () => void;
+  onSaveWord: () => void;
 };
 
-function OcrWorkspace({ ocrResult, onOcrOpen }: OcrWorkspaceProps) {
+function OcrWorkspace({
+  ocrResult,
+  onOcrOpen,
+  onTextChange,
+  onTranslationChange,
+  onRetranslate,
+  onCopyOriginal,
+  onCopyTranslation,
+  onSaveWord,
+}: OcrWorkspaceProps) {
+  const hasText = Boolean(ocrResult?.text?.trim());
+
   return (
     <section className="feature-page">
       <header className="page-header">
         <h2>截图 OCR</h2>
-        <p>框选屏幕区域，识别英文并直接给出中文结果。</p>
+        <p>框选屏幕区域，识别英文后以原文和译文对照方式处理。</p>
       </header>
       <div className="ocr-layout">
         <div className="capture-frame large">
@@ -400,11 +579,42 @@ function OcrWorkspace({ ocrResult, onOcrOpen }: OcrWorkspaceProps) {
             </>
           )}
         </div>
-        <article className="page-card result-card">
+        <article className="page-card result-card ocr-summary">
           <OcrResult ocrResult={ocrResult} />
           <button type="button" onClick={onOcrOpen}>
             {ocrResult?.status === "recognizing" ? "识别中" : "开始截图识别"}
           </button>
+        </article>
+      </div>
+      <div className="ocr-compare-grid">
+        <article className="text-panel">
+          <div className="panel-label">OCR 原文</div>
+          <textarea
+            className="copy-editor source-copy ocr-editor"
+            aria-label="OCR 原文编辑区"
+            value={ocrResult?.text ?? ""}
+            onChange={(event) => onTextChange(event.target.value)}
+            placeholder="截图识别后，可在这里修正原文。"
+          />
+          <div className="panel-actions">
+            <button type="button" onClick={onRetranslate} disabled={!hasText}>重新翻译</button>
+            <button type="button" onClick={onCopyOriginal} disabled={!hasText}>复制原文</button>
+          </div>
+        </article>
+
+        <article className="text-panel result-panel">
+          <div className="panel-label">翻译结果</div>
+          <textarea
+            className="copy-editor target-copy ocr-editor"
+            aria-label="OCR 译文编辑区"
+            value={ocrResult?.translation ?? ""}
+            onChange={(event) => onTranslationChange(event.target.value)}
+            placeholder="译文会显示在这里，也可以手动微调。"
+          />
+          <div className="panel-actions">
+            <button type="button" onClick={onCopyTranslation} disabled={!ocrResult?.translation}>复制译文</button>
+            <button type="button" onClick={onSaveWord} disabled={!hasText}>加入生词本</button>
+          </div>
         </article>
       </div>
     </section>
@@ -438,6 +648,128 @@ function ClipboardWorkspace({ clipboardOn, items, onToggle, onUseItem }: Clipboa
         <p>触发条件：复制英文超过 6 个字符。隐私策略：仅本地处理，不上传剪贴板内容。</p>
         <button type="button" onClick={onToggle}>{clipboardOn ? "停止监听" : "开启监听"}</button>
       </article>
+    </section>
+  );
+}
+
+type SettingsWorkspaceProps = {
+  settings: TranslationSettings;
+  shortcutStatus: ShortcutStatus | null;
+  onSettingsChange: (settings: TranslationSettings) => void;
+};
+
+function SettingsWorkspace({ settings, shortcutStatus, onSettingsChange }: SettingsWorkspaceProps) {
+  function updateSettings(patch: Partial<TranslationSettings>): void {
+    onSettingsChange({ ...settings, ...patch });
+  }
+
+  return (
+    <section className="feature-page">
+      <header className="page-header">
+        <h2>设置中心</h2>
+        <p>配置翻译引擎、默认方向、OCR 行为、剪贴板监听和本地隐私选项。</p>
+      </header>
+
+      <div className="settings-grid">
+        <article className="settings-section">
+          <h3>翻译</h3>
+          <label>
+            <span>翻译服务商</span>
+            <select
+              value={settings.provider}
+              onChange={(event) => updateSettings({ provider: event.target.value as TranslationProvider })}
+            >
+              {translationProviders.map((provider) => (
+                <option key={provider} value={provider}>{provider}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>默认翻译方向</span>
+            <select
+              value={settings.defaultDirection}
+              onChange={(event) => updateSettings({ defaultDirection: event.target.value as Direction })}
+            >
+              {languageDirections.map((directionItem) => (
+                <option key={directionItem} value={directionItem}>{directionItem}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>API Endpoint</span>
+            <input
+              value={settings.apiEndpoint}
+              onChange={(event) => updateSettings({ apiEndpoint: event.target.value })}
+              placeholder="https://libretranslate.com/translate"
+            />
+          </label>
+          <label>
+            <span>API Key</span>
+            <input
+              type="password"
+              value={settings.apiKey}
+              onChange={(event) => updateSettings({ apiKey: event.target.value })}
+              placeholder="用户自填，保存在本机浏览器存储"
+            />
+          </label>
+        </article>
+
+        <article className="settings-section">
+          <h3>办公体验</h3>
+          <label className="toggle-row">
+            <span>自动检测语言</span>
+            <input
+              type="checkbox"
+              checked={settings.autoDetect}
+              onChange={(event) => updateSettings({ autoDetect: event.target.checked })}
+            />
+          </label>
+          <label className="toggle-row">
+            <span>启用办公润色提示</span>
+            <input
+              type="checkbox"
+              checked={settings.officePolish}
+              onChange={(event) => updateSettings({ officePolish: event.target.checked })}
+            />
+          </label>
+          <label className="toggle-row">
+            <span>保留翻译历史</span>
+            <input
+              type="checkbox"
+              checked={settings.keepHistory}
+              onChange={(event) => updateSettings({ keepHistory: event.target.checked })}
+            />
+          </label>
+          <div className="settings-note">
+            <strong>隐私提示</strong>
+            <p>在线翻译会把原文发送到所选翻译服务商；剪贴板、生词本和离线规则数据默认只保存在本机。</p>
+          </div>
+        </article>
+
+        <article className="settings-section">
+          <h3>快捷键与 OCR</h3>
+          <label>
+            <span>划词翻译快捷键</span>
+            <input
+              value={settings.selectionShortcut}
+              onChange={(event) => updateSettings({ selectionShortcut: event.target.value })}
+              placeholder="CommandOrControl+Space"
+            />
+          </label>
+          <div className={`shortcut-status${shortcutStatus?.registered ? " is-ok" : " is-warning"}`}>
+            <strong>{shortcutStatus?.registered ? "注册成功" : "等待注册"}</strong>
+            <span>{shortcutStatus?.error || "当前快捷键可用于全局划词翻译。"}</span>
+          </div>
+          <div className="readonly-setting">
+            <span>备用快捷键建议</span>
+            <strong>CommandOrControl+Alt+T</strong>
+          </div>
+          <div className="readonly-setting">
+            <span>OCR 语言</span>
+            <strong>英文 first-pass</strong>
+          </div>
+        </article>
+      </div>
     </section>
   );
 }
@@ -597,7 +929,11 @@ function SettingsPanel({ onClose }: ClosePanelProps) {
 
 function FloatingTranslator() {
   const [source, setSource] = useState<string>("written notice within five business days");
-  const target = translateText(source, "自动检测");
+  const [target, setTarget] = useState<string>(() => translateText(source, "自动检测"));
+  const [status, setStatus] = useState<string>("离线预览");
+  const [pinned, setPinned] = useState<boolean>(false);
+  const [showSource, setShowSource] = useState<boolean>(false);
+  const [saved, setSaved] = useState<boolean>(false);
 
   useEffect(() => {
     const desktop = getDesktop();
@@ -611,6 +947,22 @@ function FloatingTranslator() {
     });
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const settings = loadSettings();
+    setTarget(translateText(source, "自动检测"));
+    setStatus("翻译中");
+    void translateWithSettings(source, settings.autoDetect ? "自动检测" : settings.defaultDirection, settings)
+      .then((result) => {
+        if (cancelled) return;
+        setTarget(result.text);
+        setStatus(result.error ? "已回退到离线译文" : "在线译文");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [source]);
+
   async function copyTarget() {
     const desktop = getDesktop();
     if (desktop) {
@@ -620,11 +972,36 @@ function FloatingTranslator() {
     await navigator.clipboard?.writeText(target);
   }
 
+  async function saveFloatingWord() {
+    const entry = createWordbookEntry(source, target);
+    const desktop = getDesktop();
+    if (desktop) {
+      const entries = await desktop.wordbook.load();
+      await desktop.wordbook.save([
+        entry,
+        ...entries.filter((item) => item.word !== entry.word),
+      ]);
+    } else {
+      const stored = JSON.parse(localStorage.getItem("translate-desk-wordbook") || "[]") as unknown;
+      const entries = Array.isArray(stored) ? stored.filter(isWordbookEntry) : [];
+      localStorage.setItem("translate-desk-wordbook", JSON.stringify([
+        entry,
+        ...entries.filter((item) => item.word !== entry.word),
+      ]));
+    }
+    setSaved(true);
+  }
+
   return (
     <main className="floating-shell">
       <header>
         <strong>Translate Desk</strong>
-        <button type="button" onClick={() => getDesktop()?.floating.hide()}>关闭</button>
+        <div>
+          <button type="button" onClick={() => setPinned((value) => !value)}>
+            {pinned ? "取消固定" : "固定"}
+          </button>
+          <button type="button" onClick={() => getDesktop()?.floating.hide()} disabled={pinned}>关闭</button>
+        </div>
       </header>
       <textarea
         aria-label="悬浮窗原文"
@@ -632,10 +1009,14 @@ function FloatingTranslator() {
         onChange={(event) => setSource(event.target.value)}
       />
       <section>
-        <span>译文</span>
-        <p>{target}</p>
+        <span>{showSource ? "原文" : status}</span>
+        <p>{showSource ? source : target}</p>
       </section>
       <footer>
+        <button type="button" onClick={() => setShowSource((value) => !value)}>
+          {showSource ? "看译文" : "看原文"}
+        </button>
+        <button type="button" onClick={saveFloatingWord}>{saved ? "已加入" : "加入生词本"}</button>
         <button type="button" onClick={() => speakText(source)}>朗读</button>
         <button type="button" onClick={copyTarget}>复制译文</button>
       </footer>
@@ -733,6 +1114,9 @@ function MainApp() {
   const [direction, setDirection] = useState<Direction>("英 → 中");
   const [sourceText, setSourceText] = useState<string>(englishDefault);
   const [targetText, setTargetText] = useState<string>(chineseDefault);
+  const [settings, setSettings] = useState<TranslationSettings>(() => loadSettings());
+  const [shortcutStatus, setShortcutStatus] = useState<ShortcutStatus | null>(null);
+  const [translationStatus, setTranslationStatus] = useState<string>("默认使用免费在线翻译；失败时自动回退到离线草稿。");
   const [clipboardItems, setClipboardItems] = useState<ClipboardHistoryItem[]>(() =>
     clipboardHistory.map((source) => ({
       source,
@@ -776,6 +1160,28 @@ function MainApp() {
   }, []);
 
   useEffect(() => {
+    localStorage.setItem("translate-desk-settings", JSON.stringify(settings));
+  }, [settings]);
+
+  useEffect(() => {
+    const desktop = getDesktop();
+    if (!desktop) return undefined;
+
+    desktop.shortcuts.getStatus().then(setShortcutStatus);
+    return desktop.shortcuts.onStatus(setShortcutStatus);
+  }, []);
+
+  useEffect(() => {
+    const desktop = getDesktop();
+    if (!desktop) return;
+
+    const timeout = window.setTimeout(() => {
+      desktop.shortcuts.setAccelerator(settings.selectionShortcut).then(setShortcutStatus);
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [settings.selectionShortcut]);
+
+  useEffect(() => {
     if (!wordbookReady) return;
 
     const desktop = getDesktop();
@@ -799,13 +1205,16 @@ function MainApp() {
     return desktop.clipboard.onText((item) => {
       const source = item?.text?.trim();
       if (!source) return;
-      const target = translateText(source, "自动检测");
-      setClipboardItems((current) => [
-        { source, target, capturedAt: item.capturedAt },
-        ...current.filter((entry) => entry.source !== source),
-      ].slice(0, 8));
+      void translateWithSettings(source, settings.autoDetect ? "自动检测" : settings.defaultDirection, settings)
+        .then(({ text }) => {
+          if (!settings.keepHistory) return;
+          setClipboardItems((current) => [
+            { source, target: text, capturedAt: item.capturedAt },
+            ...current.filter((entry) => entry.source !== source),
+          ].slice(0, 8));
+        });
     });
-  }, [clipboardOn]);
+  }, [clipboardOn, settings]);
 
   useEffect(() => {
     const desktop = getDesktop();
@@ -814,19 +1223,29 @@ function MainApp() {
     return desktop.shortcuts.onTranslate((payload) => {
       const source = payload?.text?.trim();
       if (!source) return;
-      const target = translateText(source, "自动检测");
-      setCommandPayload({ source, target });
-      setTopPanel("command");
+      void translateWithSettings(source, settings.autoDetect ? "自动检测" : settings.defaultDirection, settings)
+        .then(({ text }) => {
+          setCommandPayload({ source, target: text });
+          setTopPanel("command");
+        });
     });
-  }, []);
+  }, [settings]);
 
-  function applyTranslation(value: string): CommandPayload {
-    const nextDirection = detectDirection(value) || direction;
-    const nextTarget = translateText(value, nextDirection);
+  async function applyTranslation(value: string): Promise<CommandPayload> {
+    const nextDirection = settings.autoDetect ? detectDirection(value) || direction : settings.defaultDirection;
+    setTranslationStatus("正在调用翻译服务...");
+    const result = await translateWithSettings(value, nextDirection, settings);
     setDirection(nextDirection);
     setSourceText(value);
-    setTargetText(nextTarget);
-    return { source: value, target: nextTarget };
+    setTargetText(result.text);
+    setTranslationStatus(
+      result.error
+        ? `在线翻译失败，已使用离线草稿：${result.error}`
+        : result.usedFallback
+          ? "已使用离线规则生成译文。"
+          : "已完成在线翻译。",
+    );
+    return { source: value, target: result.text };
   }
 
   function handleSourceChange(value: string): void {
@@ -838,12 +1257,14 @@ function MainApp() {
       setDirection(detectedDirection);
     }
     setTargetText(translateText(value, nextDirection));
+    setTranslationStatus("已生成离线预览，点击“翻译”获取在线译文。");
   }
 
   function selectDirection(nextDirection: Direction): void {
     setDirection(nextDirection);
     if (nextDirection === "自动检测") {
       setTargetText(translateText(sourceText, nextDirection));
+      setTranslationStatus("已切换方向，点击“翻译”刷新在线译文。");
       return;
     }
 
@@ -861,6 +1282,7 @@ function MainApp() {
       : sourceText;
     setSourceText(nextSource);
     setTargetText(translateText(nextSource, nextDirection));
+    setTranslationStatus("已切换方向，点击“翻译”刷新在线译文。");
   }
 
   async function writeClipboard(value: string): Promise<void> {
@@ -904,7 +1326,7 @@ function MainApp() {
       externalSelection?.text?.trim() ||
       clipboardText?.trim() ||
       sourceText;
-    const payload = applyTranslation(source);
+    const payload = await applyTranslation(source);
     setCommandPayload(payload);
     setTopPanel("command");
     desktop?.floating.show(payload);
@@ -945,7 +1367,9 @@ function MainApp() {
         return;
       }
       const text = result.text?.trim() || "";
-      const translation = text ? translateText(text, "自动检测") : "";
+      const translation = text
+        ? (await translateWithSettings(text, settings.autoDetect ? "自动检测" : settings.defaultDirection, settings)).text
+        : "";
       const nextResult: OcrResultState = {
         ...result,
         text,
@@ -954,7 +1378,7 @@ function MainApp() {
       };
       setOcrResult(nextResult);
       if (text) {
-        applyTranslation(text);
+        await applyTranslation(text);
         setActiveNav("翻译工作台");
       }
     } catch (error) {
@@ -970,13 +1394,90 @@ function MainApp() {
     }
   }
 
+  async function handleOcrRetranslate(): Promise<void> {
+    const text = ocrResult?.text?.trim();
+    if (!text) return;
+    const result = await translateWithSettings(
+      text,
+      settings.autoDetect ? "自动检测" : settings.defaultDirection,
+      settings,
+    );
+    setOcrResult((current) => current ? { ...current, translation: result.text } : current);
+    setTranslationStatus(
+      result.error
+        ? `OCR 重新翻译失败，已使用离线草稿：${result.error}`
+        : "OCR 原文已重新翻译。",
+    );
+  }
+
+  function updateOcrText(text: string): void {
+    setOcrResult((current) => current
+      ? { ...current, text }
+      : {
+          status: "ready",
+          name: "Manual OCR text",
+          dataUrl: null,
+          text,
+          translation: "",
+          confidence: 0,
+          error: null,
+        });
+  }
+
+  function updateOcrTranslation(translation: string): void {
+    setOcrResult((current) => current
+      ? { ...current, translation }
+      : {
+          status: "ready",
+          name: "Manual OCR text",
+          dataUrl: null,
+          text: "",
+          translation,
+          confidence: 0,
+          error: null,
+        });
+  }
+
+  function saveOcrWord(): void {
+    if (!ocrResult?.text) return;
+    addWordbookEntry(ocrResult.text, ocrResult.translation ?? "");
+  }
+
   function handleUseClipboardItem(item: ClipboardHistoryItem): void {
-    applyTranslation(item.source);
+    void applyTranslation(item.source);
     setActiveNav("翻译工作台");
   }
 
   function renderWorkspace(): ReactNode {
-    if (activeNav === "截图 OCR") return <OcrWorkspace ocrResult={ocrResult} onOcrOpen={handleOcrOpen} />;
+    if (activeNav === "设置中心") {
+      return (
+        <SettingsWorkspace
+          settings={settings}
+          shortcutStatus={shortcutStatus}
+          onSettingsChange={setSettings}
+        />
+      );
+    }
+    if (activeNav === "截图 OCR") {
+      return (
+        <OcrWorkspace
+          ocrResult={ocrResult}
+          onOcrOpen={handleOcrOpen}
+          onTextChange={updateOcrText}
+          onTranslationChange={updateOcrTranslation}
+          onRetranslate={() => {
+            void handleOcrRetranslate();
+          }}
+          onCopyOriginal={() => {
+            void writeClipboard(ocrResult?.text ?? "");
+          }}
+          onCopyTranslation={() => {
+            void writeClipboard(ocrResult?.translation ?? "");
+          }}
+          onSaveWord={saveOcrWord}
+        />
+      );
+    }
     if (activeNav === "剪贴板监听") {
       return (
         <ClipboardWorkspace
@@ -999,11 +1500,15 @@ function MainApp() {
         direction={direction}
         sourceText={sourceText}
         targetText={targetText}
+        translationStatus={translationStatus}
         speaking={speaking}
         saved={saved}
         onDirectionChange={selectDirection}
         onSourceChange={handleSourceChange}
         onTargetChange={setTargetText}
+        onTranslate={() => {
+          void applyTranslation(sourceText);
+        }}
         onSpeakToggle={() => handleSpeak(sourceText)}
         onSave={() => addWordbookEntry()}
         onSelectionTranslate={handleSelectionTranslate}
@@ -1121,13 +1626,15 @@ function MainApp() {
 }
 
 export function App() {
-  if (typeof window !== "undefined" && window.location.hash === "#floating") {
-    return <FloatingTranslator />;
-  }
-
-  if (typeof window !== "undefined" && window.location.hash === "#capture") {
-    return <CaptureSelector />;
-  }
-
-  return <MainApp />;
+  return (
+    <ErrorBoundary>
+      {typeof window !== "undefined" && window.location.hash === "#floating" ? (
+        <FloatingTranslator />
+      ) : typeof window !== "undefined" && window.location.hash === "#capture" ? (
+        <CaptureSelector />
+      ) : (
+        <MainApp />
+      )}
+    </ErrorBoundary>
+  );
 }

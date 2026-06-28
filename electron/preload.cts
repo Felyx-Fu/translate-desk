@@ -24,7 +24,10 @@ contextBridge.exposeInMainWorld("desktop", {
     onPayload: (callback: (payload: unknown) => void) => subscribe("floating:payload", callback),
   },
   shortcuts: {
+    getStatus: () => ipcRenderer.invoke("shortcuts:get-status"),
+    setAccelerator: (accelerator: string) => ipcRenderer.invoke("shortcuts:set-accelerator", accelerator),
     onTranslate: (callback: (payload: unknown) => void) => subscribe("shortcut:translate", callback),
+    onStatus: (callback: (payload: unknown) => void) => subscribe("shortcut:status", callback),
   },
   selection: {
     read: () => ipcRenderer.invoke("selection:read"),
