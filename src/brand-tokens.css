@@ -1,5 +1,5 @@
 :root {
-  /* Translate Desk / Calm Desk brand tokens
+  /* Translate Desk / Calm Multilingual Desk brand tokens
      Import this after existing styles when you want to gradually migrate UI colors. */
 
   /* Core palette */
@@ -49,6 +49,13 @@
   --td-warning-soft: var(--td-amber-100);
   --td-info: var(--td-purple-700);
   --td-info-soft: var(--td-purple-100);
+
+  /* Multilingual UI roles */
+  --td-language-source: var(--td-green-600);
+  --td-language-target: var(--td-amber-800);
+  --td-language-auto: var(--td-purple-700);
+  --td-language-card-bg: var(--td-paper-050);
+  --td-language-card-border: var(--td-green-200);
 
   /* Type */
   --td-font-sans: "Noto Sans SC", "Microsoft YaHei UI", "Segoe UI", Arial, sans-serif;
@@ -134,4 +141,24 @@
 
 .td-quiet-button:hover {
   background: var(--td-primary-soft);
+}
+
+.td-language-card {
+  color: var(--td-text);
+  background: var(--td-language-card-bg);
+  border: 1px solid var(--td-language-card-border);
+  border-radius: var(--td-radius-md);
+}
+
+.td-language-chip {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  color: var(--td-primary);
+  background: var(--td-primary-soft);
+  border: 1px solid var(--td-green-200);
+  border-radius: var(--td-radius-pill);
+  font: 700 var(--td-font-size-xs) / 1 var(--td-font-sans);
 }
