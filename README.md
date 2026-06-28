@@ -1,118 +1,107 @@
 # Translate Desk
 
-> 面向 Windows 办公场景的英汉互译桌面工具。主界面保持安静、克制，常用翻译、划词、截图 OCR、剪贴板监听和生词本集中在一个轻量工作台里。
+> **面向 Windows 办公场景的英汉互译桌面工具。** 主界面保持安静、克制，将常用翻译、划词翻译、截图 OCR、剪贴板监听和生词本完美集中在一个轻量、高效的工作台中。
 
-![Platform](https://img.shields.io/badge/Platform-Windows-2563EB?style=flat-square)
-![Stack](https://img.shields.io/badge/Stack-TypeScript%20%2B%20Electron-0F766E?style=flat-square)
-![Status](https://img.shields.io/badge/Status-Local%20Prototype-A16207?style=flat-square)
+[![Platform](https://img.shields.io/badge/Platform-Windows-2563EB?style=flat-square&logo=windows)](https://github.com/Felyx-Fu/translate-desk)
+[![Release](https://img.shields.io/github/v/release/Felyx-Fu/translate-desk?style=flat-square&color=0F766E&logo=github)](https://github.com/Felyx-Fu/translate-desk/releases)
+[![License](https://img.shields.io/badge/License-MIT-A16207?style=flat-square)](LICENSE)
 
-## 项目定位
+---
 
-Translate Desk 是一个仍在迭代中的 Windows 英语翻译软件原型，目标是覆盖办公用户每天高频遇到的几类场景：
+## 📷 界面预览
 
-- 读合同、邮件、文档时快速完成英汉互译。
-- 在其他 Windows 应用里选中文本后，通过快捷键调出悬浮翻译。
-- 对截图区域做英文 OCR 识别，并尽量保留段落结构。
-- 监听剪贴板里的英文内容，减少反复复制、粘贴、切窗口。
-- 把常见词、业务词和生词沉淀到本地生词本。
+![Translate Desk 主界面](screenshots/quiet-workbench-prototype-final.png)
 
-当前翻译逻辑仍是本地原型规则，适合验证交互、窗口能力和产品路径；不是云端大模型翻译服务，也还不是专业词典级结果。
+---
 
-## 功能状态
+## ✨ 特性亮点
 
-| 模块 | 当前状态 | 说明 |
-| --- | --- | --- |
-| 英汉互译 | 可用原型 | 支持英译中、中译英和自动检测，翻译内容来自本地原型逻辑。 |
-| 划词翻译 | 可用原型 | `Ctrl+Space` 会优先读取其他 Windows 应用中的选中文本，失败时回退剪贴板。 |
-| 悬浮窗 | 可用原型 | 用于快速查看外部选中文本或剪贴板文本的翻译结果。 |
-| 截图 OCR 翻译 | First-pass | 基于 `tesseract.js` 做英文识别，已经支持框选区域，准确率仍需继续优化。 |
-| 剪贴板监听 | 可用原型 | 桌面模式下可监听剪贴板英文内容。 |
-| 生词本 | 可用原型 | 通过 Electron user data 做本地持久化。 |
-| 朗读 | 可用原型 | 使用系统可用的 Web Speech API。 |
-| 离线能力 | 部分可用 | 界面和原型翻译逻辑本地运行；OCR 模型和识别效果仍在调整。 |
+* 🚀 **极速划词翻译**：在任意 Windows 应用中选中文本，按下 `Ctrl + Space` 即可唤起悬浮翻译窗，即时呈现译文。
+* 📸 **截图 OCR 识别**：支持屏幕区域框选，直接提取英文图像中的文字，并保持原段落结构进行翻译。
+* 📋 **智能剪贴板监听**：自动捕捉剪贴板中的英文文本，避免频繁复制粘贴，完美契合日常阅读流。
+* 📖 **本地化生词本**：翻译历史一键保存到生词本，支持例句记录与朗读复习，数据 100% 本地留存。
+* 🔀 **智能方向检测**：无缝支持“英译中”、“中译英”，可开启“自动检测”免去手动切换的烦恼。
+* 🔇 **无扰静默运行**：无广告、无弹窗，支持开机自启和后台静默运行，只在需要时出现。
 
-## 下载与安装
+---
 
-Windows 应用包会在 GitHub Releases 中发布。最新正式版本提供 `.exe` 后缀的 Windows portable 应用产物。
+## 🔧 模块状态
 
-1. 打开项目的 GitHub Releases。
-2. 下载最新 Windows 应用包。
-3. 运行 `Translate Desk.exe`。
+| 模块 | 当前状态 | 核心说明 |
+| :--- | :--- | :--- |
+| **双语翻译** | `可用原型` | 支持英汉互译与语向自动检测，使用本地离线翻译逻辑。 |
+| **划词悬浮窗** | `可用原型` | `Ctrl + Space` 快速唤起，自动读取选中文本，回退至剪贴板。 |
+| **截图 OCR** | `区域识别` | 基于 `tesseract.js` 实现，支持自主框选区域并自动翻译。 |
+| **剪贴板监听** | `可用原型` | 监听长度大于 6 字符的英文并归档，保护剪贴板隐私。 |
+| **离线词库** | `部分可用` | 预设基础商务词库，完全断网状态下也能使用基础翻译。 |
+| **生词本** | `本地持久` | 保存到 Electron `userData` 目录，无多端同步风险。 |
+| **朗读功能** | `系统合成` | 使用系统 Web Speech API，可试听并配置语速和音色。 |
 
-如果历史版本下载的是压缩包形式，先解压到本地目录，再运行其中的 `Translate Desk.exe`。
+---
 
-## 本地运行
+## 📥 下载与安装
 
-项目使用 TypeScript、React、Vite 和 Electron。
+Windows 预编译可执行文件在项目的 **[GitHub Releases](https://github.com/Felyx-Fu/translate-desk/releases)** 页面中发布。
 
+1. 进入 **[Releases 页面](https://github.com/Felyx-Fu/translate-desk/releases)** 下载最新版 `Translate.Desk-X.Y.Z-win-x64-portable.exe`。
+2. 下载后直接双击运行即可，无需安装，绿色免安装。
+3. 如果下载的是历史版本的 `.zip` 压缩包，请先解压到任意本地目录，再运行 `Translate Desk.exe`。
+
+---
+
+## 💻 本地运行与构建
+
+本项目基于 **TypeScript**, **React**, **Vite** 和 **Electron** 构建。
+
+### 开发环境准备
 ```powershell
+# 克隆仓库
+git clone https://github.com/Felyx-Fu/translate-desk.git
+cd translate-desk
+
+# 安装依赖
 npm install
-npm run dev
 ```
 
-桌面开发模式：
-
+### 运行开发服务器
 ```powershell
+# 启动热重载开发服务器与 Electron 窗口
 npm run desktop
 ```
 
-从构建产物预览桌面端：
-
+### 本地构建预览
 ```powershell
+# 编译并启动生产包预览
 npm run desktop:preview
 ```
 
-构建 Windows 发布产物：
-
+### 打包发布产物
 ```powershell
+# 打包生成 Windows 便携式 exe 文件 (输出到 release/ 目录)
 npm run dist:win
 ```
 
-发布输出位于 `release/`，正式版本应上传到匹配的 GitHub Release。
+---
 
-## 验证
+## 🎯 路线图 (Roadmap)
 
-提交或发布前建议至少跑完这些检查：
+* [x] **v0.4.1**：提供 `.exe` 后缀的单文件 Windows 绿色便携包，降低用户上手成本。
+* [ ] **v0.5.0**：优化截图 OCR 的识别准确度及换行处理，提升中英混排识别。
+* [ ] **v0.6.0**：完善生词本复习系统（引入艾宾浩斯记忆提醒、导出 CSV/Anki 卡片）。
+* [ ] **v0.7.0**：引入主流云端大模型翻译引擎接口，供用户自主配置 API Key 以获取精细译文。
+* [ ] **v0.8.0**：评估并迁移至 Rust/Tauri 架构，以将安装包体积缩减至 10MB 以内，并降低内存占用。
 
-```powershell
-npm run build
-node --check dist-electron\main.cjs
-node --check dist-electron\preload.cjs
-npx electron . --smoke-test
-```
+---
 
-如果已经构建 Windows 应用包，也应对打包后的 `Translate Desk.exe` 执行 smoke test。
+## 🔒 隐私与安全声明
 
-## 隐私与本地处理
+我们极其重视您的数据隐私，Translate Desk 的设计原则是 **Local-First (本地优先)**：
+1. **纯本地处理**：所有的剪贴板监听、外部选中文本读取、截图 OCR 识别等，均完全在您本机的应用进程内处理，不会上传到任何第三方服务器。
+2. **数据零泄露**：生词本和历史记录文件存储于系统本地 Electron user data 目录中，项目没有任何云端账号系统，亦无任何数据同步行为。
+3. **透明开源**：核心逻辑完全公开，欢迎审计。后续若引入云端翻译 API（如 DeepL, OpenAI 等），仅在用户主动启用并填写私钥时才会发生网络请求。
 
-Translate Desk 当前优先按本地桌面工具设计：
+---
 
-- 剪贴板监听、选中文本读取、截图区域识别都发生在本机应用进程内。
-- 生词本保存在 Electron user data 目录，不主动上传到远端服务。
-- 当前没有接入云端翻译 API，也没有账户系统。
-- OCR 使用 `tesseract.js` first-pass 方案，后续会继续评估模型体积、准确率和离线体验。
+## 📄 开源协议
 
-后续如果引入云端翻译、同步或账户能力，应在功能说明和发布说明中明确数据流向与开关。
-
-## 路线图
-
-- 发布 `.exe` 后缀的 Windows 应用产物，降低普通用户安装门槛。
-- 提升自动检测和本地原型翻译质量，减少方向判断错误。
-- 优化截图 OCR 的识别准确率、区域选择体验和结果排版。
-- 完善生词本：搜索、分类、导入导出和复习状态。
-- 增强快捷键、悬浮窗和剪贴板监听的可配置能力。
-- 评估 Rust/Tauri 方案，用于更轻量的桌面壳、系统能力和发布体积优化。
-
-## 发布策略
-
-项目遵循语义化版本：
-
-- Minor release：完成用户可感知的新功能或重要应用里程碑。
-- Patch release：修复 bug、OCR/翻译问题、打包问题或小范围体验打磨。
-- Security patch release：依赖或代码层面的安全修复。
-
-每个正式版本都应更新 `CHANGELOG.md`，通过验证，创建 Git tag，并发布 GitHub Release。应用发布不能只有版本号，还应包含可运行的 Windows 应用产物。
-
-## 贡献
-
-贡献和 Pull Request 规则见 `CONTRIBUTING.md`。
+本项目采用 [MIT License](LICENSE) 开源协议。

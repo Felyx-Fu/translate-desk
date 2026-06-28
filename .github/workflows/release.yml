@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and typecheck
+        run: npm run build
+
+      - name: Check Electron main process syntax
+        run: node --check dist-electron\main.cjs
+
+      - name: Check Electron preload syntax
+        run: node --check dist-electron\preload.cjs
+
+      - name: Electron smoke test
+        run: npx electron . --smoke-test
+
+      - name: Audit production dependencies
+        run: npm audit --audit-level=moderate --omit=dev
+
+      - name: Package Windows portable executable
+        run: npm run dist:win
+
+      - name: Generate Changelog Notes
+        id: changelog
+        shell: bash
+        run: |
+          # Extract the latest version notes from CHANGELOG.md
+          # This reads from the top header down to the next version header
+          VERSION=$(echo "${{ github.ref_name }}" | sed 's/^v//')
+          awk -v ver="$VERSION" '
+            BEGIN { found = 0 }
+            /^## / {
+              if (found) exit;
+              if ($2 == ver) { found = 1; next }
+            }
+            found { print }
+          ' CHANGELOG.md > release-notes.txt
+          cat release-notes.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          body_path: release-notes.txt
+          files: release/*.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
